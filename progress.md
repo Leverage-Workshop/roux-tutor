@@ -37,6 +37,7 @@
 - **cubejs kept as the cube model**: supports M, r, and rotations, which Roux needs. Its `package.json` wrongly lists the whole `npm@6` CLI as a dependency (source of 42 audit warnings); an `overrides` entry in `package.json` swaps it for an empty package. Audit is now clean.
 - **`@types/node` ^22**: Vitest 5 requires it; runtime is Node 22.
 - **`typecheck` runs `next typegen` first**: Next 16 generates global types like `LayoutProps` used by `layout.tsx`.
+- **Context7 MCP in `.mcp.json`**: project-scoped so every agent session gets current library docs. No API key (free tier rate limits); add a `CONTEXT7_API_KEY` header later if limits bite.
 
 ## Files Modified This Session
 
