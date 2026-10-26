@@ -1,0 +1,108 @@
+{
+  "features": [
+    {
+      "id": "feat-001",
+      "name": "Project Setup",
+      "description": "Next.js + TypeScript + Tailwind app with the PRD tech stack installed (zustand, three, R3F, drei, vaul, opencv-js, cubejs, supabase) and a passing ./init.sh",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "2026-10-26: ./init.sh passed (npm ci, typecheck, lint, 3/3 vitest smoke tests in src/lib/stack.smoke.test.ts, next build). npm audit: 0 vulnerabilities."
+    },
+    {
+      "id": "feat-002",
+      "name": "Cube State Model",
+      "description": "Typed wrapper around cubejs: apply move strings (incl. M, r, rotations), undo, read per-facelet colors for rendering. Held in a zustand store with move history and current step index",
+      "dependencies": ["feat-001"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-003",
+      "name": "Mobile Viewport Layout",
+      "description": "Top 60% canvas area, bottom 40% persistent Vaul drawer with notation, stage indicator, step counter, tutorial text, and large single-thumb Next / Back buttons",
+      "dependencies": ["feat-001"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-004",
+      "name": "3D Cube Renderer",
+      "description": "R3F canvas with 27 cubelets colored from the cube state store. Drei OrbitControls for touch camera rotation; animated layer turns when stepping moves",
+      "dependencies": ["feat-002", "feat-003"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-005",
+      "name": "Manual Facelet Entry",
+      "description": "Interactive 6-face grid where the user taps facelets to set colors, with validation that the result is a legal cube state. Doubles as the scanner's correction screen",
+      "dependencies": ["feat-002"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-006",
+      "name": "Roux Solver: First Block",
+      "description": "Generate a human-style move sequence that builds the left 1x2x3 block (FB). No Kociemba output",
+      "dependencies": ["feat-002"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-007",
+      "name": "Roux Solver: Second Block",
+      "description": "Build the right 1x2x3 block using only R, r, U, and M moves",
+      "dependencies": ["feat-006"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-008",
+      "name": "Roux Solver: CMLL",
+      "description": "Recognize the top-layer corner case and apply the matching CMLL algorithm",
+      "dependencies": ["feat-007"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-009",
+      "name": "Roux Solver: LSE",
+      "description": "Solve the last six edges using only U and M moves (EO, UL/UR, EP)",
+      "dependencies": ["feat-008"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-010",
+      "name": "Move Explanations",
+      "description": "Every move in the solve maps to a dictionary entry explaining why it is played; shown in the drawer as the user steps through",
+      "dependencies": ["feat-009", "feat-003"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-011",
+      "name": "Camera Scanner",
+      "description": "Mobile camera capture of 2-3 isometric corner photos with alignment overlay; lazy-loaded OpenCV.js corrects perspective and samples facelet colors, then hands off to Manual Facelet Entry for correction",
+      "dependencies": ["feat-005"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-012",
+      "name": "Supabase Auth and Saved Scrambles",
+      "description": "Supabase auth, tables for saved scrambles and learning progress, RLS policies limiting rows to their owner",
+      "dependencies": ["feat-001"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-013",
+      "name": "Production Deployment",
+      "description": "Deploy to Vercel at rouxtutor.leverageworkshop.com behind Cloudflare DNS/proxy with caching rules",
+      "dependencies": ["feat-001"],
+      "status": "not-started",
+      "evidence": ""
+    }
+  ]
+}
