@@ -6,6 +6,7 @@ Roux Tutor: a mobile-first Next.js app that teaches the Roux method for solving 
 
 | Area | Library | Notes |
 |---|---|---|
+| Runtime | Node 24 (`.nvmrc`, `engines`) | Matches Vercel; use `nvm use` locally |
 | Framework | Next.js 16 (App Router, `src/`), React 19, TypeScript | Read `node_modules/next/dist/docs/` before using Next APIs (see Next.js Rules below) |
 | State | `zustand` | Shared between 3D canvas and HTML UI |
 | Styling / UI | Tailwind CSS 4, `vaul` | Vaul drawer for the bottom sheet |
