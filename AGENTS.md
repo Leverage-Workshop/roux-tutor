@@ -14,6 +14,7 @@ Roux Tutor: a mobile-first Next.js app that teaches the Roux method for solving 
 | Cube model | `cubejs` | Supports U R F D L B, M E S, r u f d l b, x y z. Types in `src/types/cubejs.d.ts`. Do NOT use its Kociemba `solve()` for teaching output |
 | Backend | `@supabase/supabase-js`, `@supabase/ssr` | Env vars in `.env.example`; every table needs RLS |
 | Tests | `vitest`, `@testing-library/react`, jsdom | Tests live next to code as `*.test.ts(x)` |
+| Library docs | Context7 MCP server (`.mcp.json`) | Look up current docs for any library above before writing code against its API; prefer it over memory |
 
 ## Startup Workflow
 
