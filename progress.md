@@ -3,7 +3,7 @@
 ## Current State
 
 **Last Updated:** 2026-10-27
-**Active Feature:** feat-013 - Production Deployment (in progress)
+**Active Feature:** feat-013 - Production Deployment (done)
 
 ## Status
 
@@ -16,11 +16,11 @@
 - [x] Installed PRD stack: zustand, three, @react-three/fiber, @react-three/drei, vaul, @techstark/opencv-js, cubejs, @supabase/supabase-js, @supabase/ssr
 - [x] Added Vitest + Testing Library and a stack smoke test
 - [x] feat-014: placeholder landing page at `/` (`src/app/page.tsx`, test in `src/app/page.test.tsx`), site title/description set in `layout.tsx`, body uses Geist font
-- [x] feat-013 (part): Vercel project `roux-tutor` linked to GitHub; push to `main` deploys production, other branches get preview URLs. Live at https://rouxtutor.leverageworkshop.com (Cloudflare CNAME, DNS only)
+- [x] feat-013: Vercel project `roux-tutor` linked to GitHub; push to `main` deploys production, other branches get preview URLs. Live at https://rouxtutor.leverageworkshop.com (Cloudflare CNAME, DNS only)
 
 ### What's In Progress
 
-- feat-013: Cloudflare proxy (orange cloud) and caching rules not set yet. The other Vercel sites on this zone are DNS only; if proxying, set Cloudflare SSL to Full (strict) and confirm Vercel cert renewals still pass
+- Nothing
 
 ### What's Next
 
@@ -41,7 +41,7 @@
 - **npm 11 install scripts**: npm 11 blocks dependency install scripts by default. `unrs-resolver`'s postinstall is skipped; harmless, since its native binding installs as an optional dependency and lint passes.
 - **ESLint 10 with peer overrides**: `eslint-config-next` 16.4+ supports ESLint 10 (see its docs), but `eslint-plugin-react`, `eslint-plugin-jsx-a11y` and `eslint-plugin-import` have not added 10 to their peer ranges yet. `overrides` in `package.json` point them at our ESLint. Verified every plugin still reports violations. Remove those three overrides once the plugins list ESLint 10.
 - **Vercel Git integration for deploys**: no GitHub Actions or `vercel.json` needed; Vercel builds every push itself (Node 24 from `engines`, Next.js preset). Production branch is `main`.
-- **Cloudflare record is DNS only**: matches the other Vercel sites on `leverageworkshop.com` and lets Vercel issue and renew the TLS cert directly.
+- **Cloudflare record is DNS only**: chosen by the user over the proxy. Matches the other Vercel sites on `leverageworkshop.com` and lets Vercel issue and renew the TLS cert directly. No Cloudflare caching rules; Vercel's edge cache handles it.
 - **`typecheck` runs `next typegen` first**: Next 16 generates global types like `LayoutProps` used by `layout.tsx`.
 
 ## Files Modified This Session
