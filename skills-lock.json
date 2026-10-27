@@ -1,11 +1,29 @@
 {
   "version": 1,
   "skills": {
+    "deploy-to-vercel": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/deploy-to-vercel/SKILL.md",
+      "computedHash": "d2b5bcc7c09fdb649129ffc7dd7b647ec1b155736974b974292675afd588cb39"
+    },
     "harness-creator": {
       "source": "walkinglabs/learn-harness-engineering",
       "sourceType": "github",
       "skillPath": "skills/harness-creator/SKILL.md",
       "computedHash": "703331a042d7cbfc0f80409703c998e414b5a1da29fa67602e0d173c45abf573"
+    },
+    "vercel-cli": {
+      "source": "vercel/vercel",
+      "sourceType": "github",
+      "skillPath": "skills/vercel-cli/SKILL.md",
+      "computedHash": "f44187982f783fb73f383fe05f0b42ce0917277cf3f412ca56b72da25cdf4711"
+    },
+    "vercel-react-best-practices": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/react-best-practices/SKILL.md",
+      "computedHash": "3219a1944e404ffc14d1d9d6aef6dd2e3855b81387ee0a044ccbfe14d34c2357"
     }
   }
 }
