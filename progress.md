@@ -3,7 +3,7 @@
 ## Current State
 
 **Last Updated:** 2026-10-27
-**Active Feature:** feat-014 - Placeholder Landing Page (done)
+**Active Feature:** feat-013 - Production Deployment (done)
 
 ## Status
 
@@ -16,6 +16,7 @@
 - [x] Installed PRD stack: zustand, three, @react-three/fiber, @react-three/drei, vaul, @techstark/opencv-js, cubejs, @supabase/supabase-js, @supabase/ssr
 - [x] Added Vitest + Testing Library and a stack smoke test
 - [x] feat-014: placeholder landing page at `/` (`src/app/page.tsx`, test in `src/app/page.test.tsx`), site title/description set in `layout.tsx`, body uses Geist font
+- [x] feat-013: Vercel project `roux-tutor` linked to GitHub; push to `main` deploys production, other branches get preview URLs. Live at https://rouxtutor.leverageworkshop.com (Cloudflare CNAME, DNS only)
 
 ### What's In Progress
 
@@ -29,7 +30,7 @@
 ## Blockers / Risks
 
 - [ ] OpenCV.js bundle is ~10MB: must be lazy-loaded only on the scanner route
-- [ ] Supabase project and Vercel project are not yet created/linked; `.env.local` does not exist yet
+- [ ] Supabase project is not yet created; `.env.local` does not exist yet. Once it exists, add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to the Vercel project env vars
 - [ ] Human-style Roux solver (FB/SB) is the hardest part; no off-the-shelf library does it
 
 ## Decisions Made
@@ -39,6 +40,8 @@
 - **Node 24** (`engines` in `package.json`, `.nvmrc`, `@types/node` ^24): Vercel's default and LTS until Apr 2028. Node 26 is not on Vercel yet. The cloud environment needs a setup script that installs Node 24 (its image ships Node 22).
 - **npm 11 install scripts**: npm 11 blocks dependency install scripts by default. `unrs-resolver`'s postinstall is skipped; harmless, since its native binding installs as an optional dependency and lint passes.
 - **ESLint 10 with peer overrides**: `eslint-config-next` 16.4+ supports ESLint 10 (see its docs), but `eslint-plugin-react`, `eslint-plugin-jsx-a11y` and `eslint-plugin-import` have not added 10 to their peer ranges yet. `overrides` in `package.json` point them at our ESLint. Verified every plugin still reports violations. Remove those three overrides once the plugins list ESLint 10.
+- **Vercel Git integration for deploys**: no GitHub Actions or `vercel.json` needed; Vercel builds every push itself (Node 24 from `engines`, Next.js preset). Production branch is `main`.
+- **Cloudflare record is DNS only**: chosen by the user over the proxy. Matches the other Vercel sites on `leverageworkshop.com` and lets Vercel issue and renew the TLS cert directly. No Cloudflare caching rules; Vercel's edge cache handles it.
 - **`typecheck` runs `next typegen` first**: Next 16 generates global types like `LayoutProps` used by `layout.tsx`.
 
 ## Files Modified This Session

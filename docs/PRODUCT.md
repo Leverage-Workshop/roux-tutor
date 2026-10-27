@@ -47,5 +47,5 @@ The core loop allows a user to photograph their physical scrambled cube, instant
 * **Control Targets:** Large layout touch targets for "Next Move" and "Back" optimized for single-thumb operations on mobile devices.
 
 ## 5. Security & Edge Delivery
-* Cloudflare proxy configurations handles caching rules and provides protection layers for the underlying Vercel endpoints.
+* Cloudflare is DNS only (no proxy): a CNAME points the production URL at Vercel, and Vercel's edge network handles caching, TLS and protection.
 * Supabase Row Level Security (RLS) policies guard historical scramble captures and learning path milestones uniquely linked to user authentication records.
