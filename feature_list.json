@@ -90,11 +90,11 @@
     },
     {
       "id": "feat-012",
-      "name": "Supabase Auth and Saved Scrambles",
-      "description": "Supabase auth, tables for saved scrambles and learning progress, RLS policies limiting rows to their owner",
+      "name": "Google Sign-In and Tutoring Sessions",
+      "description": "Optional Google sign-in through Supabase Auth (sign-in button, /auth/callback, session refresh in src/proxy.ts) and a tutoring_sessions table (one row per guided solve) with RLS limiting rows to their owner. Done when a user can sign in with Google on production",
       "dependencies": ["feat-001"],
-      "status": "not-started",
-      "evidence": ""
+      "status": "in-progress",
+      "evidence": "2026-10-27: Supabase project roux-tutor (ref uhswyjnzypxpdomhlxdy, us-east-1, free) created; migration supabase/migrations/20261027220000_create_tutoring_sessions.sql applied; security advisor clean. RLS checked live in a rolled-back transaction: a user sees and updates only their own rows, inserting as another user and any anon access fail with 42501. NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY set in Vercel (all environments). ./init.sh passed on Node 24 (52/52 tests, build with and without env vars; / stays static). next start: /auth/callback without or with a bad code redirects to /auth/error. Sign-in button checked at 390px light/dark, no horizontal scroll. Remaining: owner must create the Google OAuth client and enable the Google provider and redirect URLs in Supabase (docs/AUTH.md), then test sign-in on production."
     },
     {
       "id": "feat-013",
@@ -111,6 +111,14 @@
       "dependencies": ["feat-001"],
       "status": "done",
       "evidence": "2026-10-27: ./init.sh passed (typecheck, lint, 4/4 vitest incl. src/app/page.test.tsx, next build with / static). Checked at 390px in light and dark: no horizontal scroll."
+    },
+    {
+      "id": "feat-015",
+      "name": "Saved Scrambles and Learning Stats",
+      "description": "Signed-in users can save scrambles and see stats from their tutoring sessions (solves started/finished, progress per Roux stage). New tables or views get RLS limiting rows to their owner",
+      "dependencies": ["feat-012"],
+      "status": "not-started",
+      "evidence": ""
     }
   ]
 }

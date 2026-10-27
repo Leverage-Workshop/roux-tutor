@@ -1,4 +1,5 @@
 // Placeholder landing page until the scanner and tutor screens exist.
+import { AuthButton } from "@/components/AuthButton";
 
 const FACE_COLORS = [
   "bg-white",
@@ -21,7 +22,10 @@ const STAGES = [
 
 export default function Home() {
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center gap-10 px-6 py-16 text-center">
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center gap-10 px-6 pt-4 pb-16 text-center">
+      <header className="flex min-h-11 w-full justify-end">
+        <AuthButton />
+      </header>
       <div
         aria-hidden="true"
         className="grid grid-cols-3 gap-1.5 rounded-xl bg-zinc-900 p-1.5 shadow-lg"
