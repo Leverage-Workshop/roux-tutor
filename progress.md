@@ -3,7 +3,7 @@
 ## Current State
 
 **Last Updated:** 2026-10-27
-**Active Feature:** feat-013 - Production Deployment (done)
+**Active Feature:** feat-002 - Cube State Model (done)
 
 ## Status
 
@@ -17,6 +17,11 @@
 - [x] Added Vitest + Testing Library and a stack smoke test
 - [x] feat-014: placeholder landing page at `/` (`src/app/page.tsx`, test in `src/app/page.test.tsx`), site title/description set in `layout.tsx`, body uses Geist font
 - [x] feat-013: Vercel project `roux-tutor` linked to GitHub; push to `main` deploys production, other branches get preview URLs. Live at https://rouxtutor.leverageworkshop.com (Cloudflare CNAME, DNS only)
+- [x] feat-002: cube state model in `src/lib/cube/`
+  - `notation.ts`: `parseAlgorithm` normalizes move strings (`Rw` -> `r`, `R2'` -> `R2`, curly apostrophes, parentheses, no-space input) into typed `Move`s; `invertMove`, `invertAlgorithm`, `formatAlgorithm`
+  - `model.ts`: pure functions over a plain `CubeState` (`applyMoves`, `toFacelets`, `fromFacelets`, `isSolved`, `faceletColors`, `faceColors`, `faceletPosition`), Western color scheme `FACE_COLOR` and shared `STICKER_HEX` palette. Facelet layout documented at the top of the file
+  - `store.ts`: `createCubeStore` (zustand vanilla) with `initial`, `moves`, `stepIndex`, `cube`, `facelets`, `lastTurn`; actions `setInitial`, `scramble`, `loadMoves`, `applyMoves`, `next`, `back` (undo), `goTo`
+  - `CubeStoreProvider.tsx`: per-provider store + `useCubeStore(selector)` hook (zustand's Next.js pattern)
 
 ### What's In Progress
 
@@ -24,14 +29,16 @@
 
 ### What's Next
 
-1. feat-002 Cube State Model (wrapper over cubejs + zustand store)
-2. feat-003 Mobile Viewport Layout (can run in parallel with feat-002)
+1. feat-003 Mobile Viewport Layout (wrap the page in `<CubeStoreProvider>`; Next/Back call the store's `next`/`back`)
+2. Then feat-004 3D Cube Renderer, feat-005 Manual Facelet Entry, or feat-006 First Block solver (all unblocked by feat-002)
 
 ## Blockers / Risks
 
 - [ ] OpenCV.js bundle is ~10MB: must be lazy-loaded only on the scanner route
 - [ ] Supabase project is not yet created; `.env.local` does not exist yet. Once it exists, add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to the Vercel project env vars
 - [ ] Human-style Roux solver (FB/SB) is the hardest part; no off-the-shelf library does it
+- [ ] `fromFacelets` only checks format and that each corner/edge is a real piece. Full legality (each piece once, corner twist, edge flip, parity) is still to do in feat-005
+- [ ] Claude's shell in the cloud container gets Node 22, not 24. The setup script installs `/opt/node24` and puts it on PATH in line 1 of `~/.bashrc`, but Claude's non-interactive shell never reads `~/.bashrc`, and `/opt/node22/bin` is on the default PATH. Workaround: `export PATH=/opt/node24/bin:$PATH` before `./init.sh`. Likely fix: a SessionStart hook that writes that export to `$CLAUDE_ENV_FILE`. (A parallel session on 2026-10-27 thought moving the line to the top of `~/.bashrc` would fix it; the line is already there and the shell still gets Node 22.)
 
 ## Decisions Made
 
@@ -42,11 +49,13 @@
 - **ESLint 10 with peer overrides**: `eslint-config-next` 16.4+ supports ESLint 10 (see its docs), but `eslint-plugin-react`, `eslint-plugin-jsx-a11y` and `eslint-plugin-import` have not added 10 to their peer ranges yet. `overrides` in `package.json` point them at our ESLint. Verified every plugin still reports violations. Remove those three overrides once the plugins list ESLint 10.
 - **Vercel Git integration for deploys**: no GitHub Actions or `vercel.json` needed; Vercel builds every push itself (Node 24 from `engines`, Next.js preset). Production branch is `main`.
 - **Cloudflare record is DNS only**: chosen by the user over the proxy. Matches the other Vercel sites on `leverageworkshop.com` and lets Vercel issue and renew the TLS cert directly. No Cloudflare caching rules; Vercel's edge cache handles it.
+- **Cube store keeps plain `CubeState` and a facelet string, not cubejs objects**: serializable, and selectors can compare the facelet string cheaply. `lastTurn` (move + increasing id) tells the renderer which single move to animate; Back sets it to the inverse move. Jumps (`goTo`, multi-move `applyMoves`) set it to null.
+- **Store per provider, not a module global**: follows zustand's Next.js guidance so no state is shared across server requests.
 - **`typecheck` runs `next typegen` first**: Next 16 generates global types like `LayoutProps` used by `layout.tsx`.
 
 ## Files Modified This Session
 
-- Everything (initial commit)
+- `src/lib/cube/*` (new), `feature_list.json`, `progress.md`
 
 ## Evidence of Completion
 

@@ -13,8 +13,8 @@
       "name": "Cube State Model",
       "description": "Typed wrapper around cubejs: apply move strings (incl. M, r, rotations), undo, read per-facelet colors for rendering. Held in a zustand store with move history and current step index",
       "dependencies": ["feat-001"],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "2026-10-27: src/lib/cube/ (notation.ts, model.ts, store.ts, CubeStoreProvider.tsx). ./init.sh passed (typecheck, lint, 42/42 vitest incl. 38 new tests in src/lib/cube/*.test.ts(x), next build). Tests check exact sticker layouts after R and M, r = R M' = Rw, x keeps the cube solved, inverse algorithms restore solved, facelet strings round-trip with moved centers, and the store's next/back (undo/redo), applyMoves truncation and goTo."
     },
     {
       "id": "feat-003",
