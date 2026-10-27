@@ -103,6 +103,14 @@
       "dependencies": ["feat-001"],
       "status": "not-started",
       "evidence": ""
+    },
+    {
+      "id": "feat-014",
+      "name": "Placeholder Landing Page",
+      "description": "Replace the create-next-app starter at / with a Roux Tutor placeholder: app name, tagline, 'Coming soon', and the four Roux stages. Set site title/description metadata",
+      "dependencies": ["feat-001"],
+      "status": "done",
+      "evidence": "2026-10-27: ./init.sh passed (typecheck, lint, 4/4 vitest incl. src/app/page.test.tsx, next build with / static). Checked at 390px in light and dark: no horizontal scroll."
     }
   ]
 }
