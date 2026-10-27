@@ -38,7 +38,7 @@
 - [ ] Supabase project is not yet created; `.env.local` does not exist yet. Once it exists, add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to the Vercel project env vars
 - [ ] Human-style Roux solver (FB/SB) is the hardest part; no off-the-shelf library does it
 - [ ] `fromFacelets` only checks format and that each corner/edge is a real piece. Full legality (each piece once, corner twist, edge flip, parity) is still to do in feat-005
-- [ ] The cloud container runs Node 22 (npm ci prints EBADENGINE warnings); all checks still pass. A setup script installing Node 24 would remove the warnings
+- [ ] Claude's shell in the cloud container gets Node 22, not 24. The setup script installs `/opt/node24` and puts it on PATH in line 1 of `~/.bashrc`, but Claude's non-interactive shell never reads `~/.bashrc`, and `/opt/node22/bin` is on the default PATH. Workaround: `export PATH=/opt/node24/bin:$PATH` before `./init.sh`. Likely fix: a SessionStart hook that writes that export to `$CLAUDE_ENV_FILE`. (A parallel session on 2026-10-27 thought moving the line to the top of `~/.bashrc` would fix it; the line is already there and the shell still gets Node 22.)
 
 ## Decisions Made
 
