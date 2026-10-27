@@ -2,8 +2,8 @@
 
 ## Current State
 
-**Last Updated:** 2026-10-26
-**Active Feature:** feat-001 - Project Setup (done)
+**Last Updated:** 2026-10-27
+**Active Feature:** feat-014 - Placeholder Landing Page (done)
 
 ## Status
 
@@ -15,6 +15,7 @@
 - [x] Scaffolded Next.js 16 app (TypeScript, Tailwind 4, ESLint, App Router, `src/`)
 - [x] Installed PRD stack: zustand, three, @react-three/fiber, @react-three/drei, vaul, @techstark/opencv-js, cubejs, @supabase/supabase-js, @supabase/ssr
 - [x] Added Vitest + Testing Library and a stack smoke test
+- [x] feat-014: placeholder landing page at `/` (`src/app/page.tsx`, test in `src/app/page.test.tsx`), site title/description set in `layout.tsx`, body uses Geist font
 
 ### What's In Progress
 
