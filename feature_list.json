@@ -101,8 +101,8 @@
       "name": "Production Deployment",
       "description": "Deploy to Vercel at rouxtutor.leverageworkshop.com behind Cloudflare DNS/proxy with caching rules",
       "dependencies": ["feat-001"],
-      "status": "not-started",
-      "evidence": ""
+      "status": "in-progress",
+      "evidence": "2026-10-27: Vercel project roux-tutor (prj_E9vC1LvJysSDD5xDa4RbZ3toOc66, team leverage-workshop-s-projects) linked to GitHub leverage-workshop/roux-tutor; pushes to main deploy to production, other branches get previews. Domain rouxtutor.leverageworkshop.com added and verified in Vercel. Cloudflare zone leverageworkshop.com has CNAME rouxtutor -> 184efad4876a593e.vercel-dns-017.com (DNS only). curl https://rouxtutor.leverageworkshop.com/ returned 200 with <title>Roux Tutor</title>. Remaining: decide on Cloudflare proxy (orange cloud) and add caching rules."
     },
     {
       "id": "feat-014",
