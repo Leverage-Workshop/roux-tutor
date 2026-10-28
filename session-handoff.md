@@ -2,24 +2,26 @@
 
 ## Current Objective
 
-- Goal: Roux Solver: Second Block (feat-007)
-- Current status: Done. `solveSecondBlock(state)` and `solveBlocks(state)` in `src/lib/solver/secondBlock.ts`
+- Goal: Roux Solver: CMLL (feat-008)
+- Current status: Done. `solveCmll(state)`, `isCmllSolved`, `solveThroughCmll` in `src/lib/solver/cmll.ts`; the 42-case table in `src/lib/solver/cmllCases.ts`
 - Branch / commit: see `git log --oneline -1`
 
 ## Completed This Session
 
-- [x] Second block solved Roux style with only R, r, U, M: the yellow-red DR edge, then each right pair freed (if stuck in a right-side slot), joined in the top layer, and inserted as a unit
-- [x] DR edge and finished pairs are home at the end of every phase; the first block is never touched
-- [x] Step names/goals for the tutor drawer, including a note when the M-slice centers are turned
-- [x] `isSecondBlockSolved`, `solveBlocks` (FB then SB)
+- [x] 42 CMLL algorithms (O, H, Pi, U, T, S, AS, L) stored as data with id, set, name, nickname, algorithm and a generated recognition note
+- [x] Every algorithm checked by computer; two remembered ones replaced (H 3 solved a Pi case, S 4 broke the second block)
+- [x] Recognition from the corners relative to the blocks only (works with the middle slice turned); lookup table over all 647 unsolved top-corner states picks the shortest pre-AUF + algorithm + post-AUF
+- [x] Steps `cmll-pre-auf`, `cmll` (carries `case`), `cmll-post-auf`; corners end solved relative to the blocks
+- [x] `solveThroughCmll` chains FB + SB + CMLL
 
 ## Verification Evidence
 
 | Check | Command | Result | Notes |
 |---|---|---|---|
-| Full harness | `./init.sh` | Pass | 162/162 tests (13 new) |
-| Solver on random cubes | `secondBlock.test.ts` | Pass | 120 seeded scrambles; every move, phase and the first block checked after each move |
-| Speed / length | ad hoc benchmark, 400 random cubes | SB 15.0 moves avg, max 21 | first solve ~60ms (tables), median 1.6ms; plain per-piece shortest would be ~13.3 |
+| Full harness | `./init.sh` | Pass | 182/182 tests (20 new) |
+| Table | `cmllCases.test.ts` | Pass | each algorithm keeps both blocks and L/R centers, no rotations, solves its case, right set; 42 distinct cases |
+| Solver | `cmll.test.ts` | Pass | all 648 top-corner states, fewest moves from the table; 120 seeded scrambles through FB + SB + CMLL |
+| Speed / length | ad hoc benchmark, 1000 random cubes | 11.3 moves avg, max 17 | first call ~40ms (table), then median 0.02ms |
 
 ## Files Changed
 
@@ -27,14 +29,14 @@
 
 ## Decisions Made
 
-- See "Decisions Made" in `progress.md` (Roux-style SB phases, M centers left for LSE, no step starts on the layer the previous step ended on)
+- See "Decisions Made" in `progress.md` (table lookup, corners end fully solved, neutral case names, generated recognition notes)
 
 ## Blockers / Risks
 
-- The solver is not used by `/tutor` yet; the demo lesson stays hand-written until CMLL and LSE exist
-- After FB+SB the U/F/D/B centers are often turned by M moves. CMLL should recognize cases from the corners only (relative to the L/R blocks), and LSE must solve the centers along with the six edges
-- Step ids: FB uses `front-pair-*`, SB uses `front-right-pair-*` and `dr-edge`, so a move-explanation dictionary (feat-010) can key on them without clashes
-- Steps can still merge across a boundary on different layers (e.g. `M` then `r U R'`); allowed on purpose, it reads as join-then-insert
+- The solver is not used by `/tutor` yet; the demo lesson stays hand-written until LSE exists
+- CMLL may start on the layer SB ended on (~13% of cubes, e.g. `R'` then Sune's `R`); left as is, one algorithm per case
+- For LSE (feat-009): after CMLL only UL, UR, UF, UB, DF, DB and the M-slice centers are unsolved. Centers can be in any of the 4 M positions (CMLL algorithms with r/M move them too). Step ids so far: FB `orient`, `dl-edge`, `front|back-pair-*`; SB `dr-edge`, `front|back-right-pair-*`; CMLL `cmll-pre-auf`, `cmll`, `cmll-post-auf`. Pick LSE ids that don't clash (e.g. `lse-eo`, `lse-ulur`, `lse-ep`)
+- For explanations (feat-010): the `cmll` step has `case` (`id` like `t-1`, `set`, `name`, `recognition`); `CMLL_SETS` gives each set's label and shape text
 
 ## Next Session Startup
 
@@ -46,4 +48,4 @@
 
 ## Recommended Next Step
 
-- feat-008 CMLL: start from `solveBlocks(state)`; recognize the top-corner case after a U adjustment and apply its algorithm, checking both blocks stay solved
+- feat-009 LSE: start from `solveThroughCmll(state)`; solve the six edges and the M-slice centers with U and M only
