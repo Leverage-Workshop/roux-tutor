@@ -137,7 +137,7 @@ function algEffort(moves: readonly Move[]): number {
 }
 
 /** Pick the plan with the fewest moves, then the easiest moves. */
-function best<T extends { moves: readonly Move[] }>(plans: readonly T[]): T {
+export function best<T extends { moves: readonly Move[] }>(plans: readonly T[]): T {
   return plans.reduce((a, b) => {
     if (a.moves.length !== b.moves.length) return b.moves.length < a.moves.length ? b : a;
     return algEffort(b.moves) < algEffort(a.moves) ? b : a;
@@ -179,19 +179,19 @@ export function isFirstBlockSolved(state: CubeState): boolean {
  * touch with matching colors. These are exactly the 24 places a whole-cube
  * rotation can carry the solved pair to. Keys are corner * 24 + edge.
  */
-function joinedPlacements(pair: PairId): Set<number> {
-  const { edge, corner } = PAIR_PIECES[pair];
+export function joinedPlacements(corner: TrackedPiece, edge: TrackedPiece): Set<number> {
   const placements = new Set<number>();
   for (const rotation of ROTATION_CANDIDATES) {
     const turned = applyMoves(solvedState(), rotation);
-    placements.add(pieceCoord(turned, BLOCK[corner]) * 24 + pieceCoord(turned, BLOCK[edge]));
+    placements.add(pieceCoord(turned, corner) * 24 + pieceCoord(turned, edge));
   }
   return placements;
 }
 let joined: Record<PairId, Set<number>> | undefined;
 /** Rule over [corner, edge] coordinates: the pair is joined. */
 function isJoined(pair: PairId, corner: number, edge: number): boolean {
-  joined ??= { front: joinedPlacements("front"), back: joinedPlacements("back") };
+  const placements = (p: PairId) => joinedPlacements(BLOCK[PAIR_PIECES[p].corner], BLOCK[PAIR_PIECES[p].edge]);
+  joined ??= { front: placements("front"), back: placements("back") };
   return joined[pair].has(corner * 24 + edge);
 }
 

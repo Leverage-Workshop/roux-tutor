@@ -60,7 +60,8 @@ export function applyAlgorithm(
   }, coords as number[]);
 }
 
-function tableIndex(coords: readonly number[]): number {
+/** Index of a placement in a distanceTable over the same pieces, in the same order. */
+export function tableIndex(coords: readonly number[]): number {
   let index = 0;
   for (let i = coords.length - 1; i >= 0; i--) index = index * 24 + coords[i];
   return index;
@@ -166,12 +167,14 @@ export interface SearchOptions {
   maxDepth: number;
   /** Stop collecting after this many equally short solutions. */
   maxSolutions: number;
+  /** When set, only first moves that pass it are tried (e.g. not the layer the previous step ended on). */
+  firstMove?: (move: Move) => boolean;
 }
 
 /** Every shortest solution (up to maxSolutions) from `start` coordinates. */
 export function shortestSolutions(step: StepGoal, start: readonly number[], options: SearchOptions): Move[][] {
   const { pieces, goal, keep, bounds } = step;
-  const { moves, maxDepth, maxSolutions } = options;
+  const { moves, maxDepth, maxSolutions, firstMove } = options;
   if (keep && !keep(start)) throw new Error("Start position breaks the step's keep rule");
   const tables = bounds.map((b) => ({
     subset: b.subset,
@@ -201,7 +204,7 @@ export function shortestSolutions(step: StepGoal, start: readonly number[], opti
     }
     if (lowerBound(coords) > remaining) return;
     for (const m of moves) {
-      if (!canFollow(path[path.length - 1], m)) continue;
+      if (path.length === 0 ? firstMove && !firstMove(m.move) : !canFollow(path[path.length - 1], m)) continue;
       const moved = applyMove(pieces, coords, m);
       if (keep && !keep(moved)) continue;
       path.push(m);

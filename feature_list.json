@@ -53,8 +53,8 @@
       "name": "Roux Solver: Second Block",
       "description": "Build the right 1x2x3 block using only R, r, U, and M moves",
       "dependencies": ["feat-006"],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "2026-10-28: src/lib/solver/secondBlock.ts. solveSecondBlock(state) builds SB the Roux way from a cube whose first block is solved, using only R, r, U and M (so the first block is never touched), and returns named steps: the yellow-red DR edge, then for each right pair (shorter order first): free the pieces if stuck in a right-side slot, join corner and edge in the top layer, insert the joined pair while it stays joined every move. The DR edge and finished pairs are home at the end of every phase. A step never starts on the layer the previous step ended on (no 'R2' then 'R''). Same IDA* search and moveEffort tie-breaks as FB. M-slice centers are left turned (LSE fixes them); the DR-edge step says so when they are off. Also isSecondBlockSolved (right center + 5 pieces) and solveBlocks (FB then SB). Random cubes (400): SB 15.0 moves on average, max 21 (plain per-piece shortest would be ~13.3); first solve ~60ms (builds tables), then median 1.6ms, max 12ms; FB unchanged (~170ms first, 0.5ms median). 2000 random-state cubes: all solved, max 23. ./init.sh passed (typecheck, lint, 162/162 tests incl. 13 new in secondBlock.test.ts: 120 seeded scrambles check every move is R/r/U/M, the first block stays solved after every move, free ends with the pair out of the slots, join ends joined in the top layer, insert keeps the pair joined every move, DR edge and finished pairs home after each step; exact cases R2, R U R', R U' R' (join M, insert r U R'), free/join/insert and free-then-insert; after FB+SB only top corners, the 6 LSE edges and M centers are unsolved; next build). Not wired into /tutor yet."
     },
     {
       "id": "feat-008",
