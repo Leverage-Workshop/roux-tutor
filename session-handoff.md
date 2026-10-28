@@ -2,24 +2,23 @@
 
 ## Current Objective
 
-- Goal: 3D Cube Renderer (feat-004)
-- Current status: Done. `/tutor` shows a 3D cube with animated turns
+- Goal: Roux Solver: First Block (feat-006)
+- Current status: Done. `solveFirstBlock(state)` in `src/lib/solver/firstBlock.ts`
 - Branch / commit: see `git log --oneline -1`
 
 ## Completed This Session
 
-- [x] R3F cube with 27 cubelets colored from the store, drag to orbit
-- [x] Animated layer turns on Next / Back (queued when tapping fast, skipped with reduced motion)
-- [x] Lazy-loaded three.js; flat net fallback without WebGL
-- [x] Tests proving each move's animation ends on cubejs's state
+- [x] Piece tracking with move tables taken from cubejs (`pieces.ts`)
+- [x] Reusable shortest-path search over a few pieces (`search.ts`), ready for SB
+- [x] First block solved as beginners learn it: rotation if needed, DL edge, front pair, back pair (shorter order first)
 
 ## Verification Evidence
 
 | Check | Command | Result | Notes |
 |---|---|---|---|
-| Full harness | `./init.sh` | Pass | 134/134 tests, `/tutor` static |
-| 3D view | Playwright + `next start` | Pass | 390x844 light/dark, 375x667, orbit, mid-turn frame, no console errors |
-| Turn animation | Playwright | Pass | Rapid taps match slow taps pixel for pixel; full demo ends solved; reduced motion snaps |
+| Full harness | `./init.sh` | Pass | 148/148 tests (14 new) |
+| Solver on random cubes | `firstBlock.test.ts` | Pass | 100 seeded scrambles; each step leaves its pieces home; at most 14 moves |
+| Speed | ad hoc benchmark, 300 random cubes | ~9.2 moves avg | median 0.5ms, max ~65ms |
 
 ## Files Changed
 
@@ -27,11 +26,12 @@
 
 ## Decisions Made
 
-- See "Decisions Made" in `progress.md` (turn animation approach, flat net fallback)
+- See "Decisions Made" in `progress.md` (line + pairs, face turns only, standard centers, tie-breaks)
 
 ## Blockers / Risks
 
-- R3F logs a harmless `THREE.Clock` deprecation warning with three r186
+- The solver is not used by `/tutor` yet; the demo lesson stays hand-written until SB, CMLL and LSE exist
+- SB will need M-slice center offsets handled (SB uses r and M)
 
 ## Next Session Startup
 
@@ -43,4 +43,4 @@
 
 ## Recommended Next Step
 
-- Save tutoring sessions from `/tutor` for signed-in users, feat-005 Manual Facelet Entry, or feat-006 First Block solver
+- feat-007 Second Block: reuse `shortestSolutions` with layers R, r, U, M, keeping the five FB pieces home

@@ -3,7 +3,7 @@
 ## Current State
 
 **Last Updated:** 2026-10-28
-**Active Feature:** feat-004 - 3D Cube Renderer (done)
+**Active Feature:** feat-006 - Roux Solver: First Block (done)
 
 ## Status
 
@@ -46,14 +46,20 @@
   - `src/components/tutor/CubeView.tsx`: lazy-loads `Cube3D` (`next/dynamic`, `ssr: false`), falls back to `CubeNet` without WebGL or if the 3D view throws
   - `useCubeStoreApi()` added to `CubeStoreProvider.tsx` (the renderer subscribes with before/after state)
 
+- [x] feat-006 First Block solver in `src/lib/solver/`
+  - `pieces.ts`: follows single pieces as 0-23 numbers (position + orientation); move tables read from cubejs
+  - `search.ts`: `buildMoveSet`, `distanceTable` (BFS, up to 4 pieces, cached), `shortestSolutions` (IDA*, returns every shortest solution up to a cap), `applyAlgorithm`
+  - `firstBlock.ts`: `solveFirstBlock(state)` -> `{ moves, steps }`, steps `orient` (only if needed), `dl-edge`, `front-pair`, `back-pair`, each with `name`, `goal`, `moves`; also `isFirstBlockSolved`, `orientationMoves`, `moveEffort`
+  - Not used by `/tutor` yet; the demo lesson stays hand-written until the other stages exist
+
 ### What's In Progress
 
 - Nothing
 
 ### What's Next
 
-1. Save tutoring sessions from `/tutor`: if signed in, call `startTutoringSession` when a solve loads, `saveTutoringProgress` on Next/Back (debounced), `completeTutoringSession` at the end
-2. feat-005 Manual Facelet Entry, or feat-006 First Block solver
+1. feat-007 Second Block solver: reuse `search.ts` with layers R, r, U, M and a goal of the FB pieces plus the right block
+2. Save tutoring sessions from `/tutor`: if signed in, call `startTutoringSession` when a solve loads, `saveTutoringProgress` on Next/Back (debounced), `completeTutoringSession` at the end
 3. Optional for the 3D view: a "reset view" button after orbiting, and swiping on the cube to turn layers (the PRD's "interactions on the cube trigger visual layer rotations"; not part of feat-004)
 
 ## Blockers / Risks
@@ -65,6 +71,12 @@
 - [x] Fixed 2026-10-28: Claude's shell in the cloud container got Node 22 (`/opt/node22/bin` is on the default PATH and Claude's shell never reads `~/.bashrc`). `.claude/hooks/session-start.sh` (SessionStart hook, registered in `.claude/settings.json`) now writes `/opt/node24/bin` to the front of PATH via `$CLAUDE_ENV_FILE` and runs `npm install`. Takes effect for sessions that start from a branch containing the hook; no manual `export PATH` needed
 
 ## Decisions Made
+
+- **First block is taught as line + two pairs** (feat-006): the yellow-orange edge first, then each corner-edge pair, every step as short as possible. About 9 moves on average, vs ~7 for an expert-style whole-block solve (the demo's hand-written FB is 6, the solver's is 9). Easier to follow and to explain move by move (feat-010).
+- **FB uses face turns only** (U D F B L R): adding M and r saved ~1 move (8.3 vs 9.3 average) but moved the yellow center off the bottom mid-block. One constant (`FB_LAYERS`) to change if wanted.
+- **Solves start from standard centers**: if orange isn't left or yellow isn't down, the first step is a whole-cube rotation. A cube with a turned middle slice also gets one, even if its block is already built; face-turn scrambles never do.
+- **Ties between equally short solves** go to the easier moves: R, U cheapest, then r, M, L, F, D, B hardest; half turns slightly more (`moveEffort`).
+- **No 4-piece lookup table for the last pair**: it cut search time a little but took ~0.6s to build on the first solve; without it every solve takes under ~65ms.
 
 - **3D turn animation** (feat-004): the store changes state immediately; the renderer keeps drawing the old state and rotates the moving layer, then swaps to the new state. `geometry.test.ts` proves that for all 54 moves the turned layer lands exactly on cubejs's new state, so the swap can't flicker. Turning cubelets live in a fresh `<group key>` per turn; while React catches up after a turn ends, the group is held at its end angle.
 - **Flat net kept as the fallback** when WebGL is missing or the 3D chunk fails to load (e.g. offline). jsdom has no WebGL, so `TutorScreen.test.tsx` runs against the net.
@@ -93,12 +105,12 @@
 
 ## Files Modified This Session
 
-- `src/lib/cube/geometry.ts`, `src/lib/cube/turnAnimator.ts`, `src/components/cube3d/Cube3D.tsx`, `src/components/tutor/CubeView.tsx` and their tests (new); `src/lib/cube/CubeStoreProvider.tsx`, `src/components/tutor/TutorScreen.tsx`, `TutorScreen.test.tsx`, `CubeNet.tsx`, `feature_list.json`, `progress.md`, `session-handoff.md`
+- `src/lib/solver/pieces.ts`, `search.ts`, `firstBlock.ts` and tests (new); `feature_list.json`, `progress.md`, `session-handoff.md`
 
 ## Evidence of Completion
 
-- [x] `./init.sh` passes on Node 24: npm ci, typecheck, lint, 134/134 tests, build (`/tutor` static)
-- [x] Playwright (SwiftShader WebGL) against `next start`: 3D cube at 390x844 (light, dark) and 375x667; mid-turn frame; drag orbits; rapid taps end pixel-identical to slow taps; all 32 demo moves end solved; reduced motion skips the animation; no console errors; three.js not in `/tutor`'s initial scripts
+- [x] `./init.sh` passes on Node 24: npm ci, typecheck, lint, 148/148 tests, build
+- [x] 100 seeded random scrambles: block built, each step leaves its pieces home, at most 14 moves; 300 random cubes: ~9.2 moves average, median 0.5ms
 
 ## Notes for Next Session
 
