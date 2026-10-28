@@ -1,17 +1,18 @@
-// Placeholder lesson for the tutor screen until the Roux solver (feat-006 to
-// feat-009) generates real ones. The scramble is the inverse of a hand-written
-// Roux solve, so the solve is exact; demoLesson.test.ts checks that each stage
-// really completes its blocks, corners and edges.
-import { formatAlgorithm, invertAlgorithm, toMoves } from "@/lib/cube/notation";
-import { createLesson, type RouxStageId } from "./lesson";
+// The lesson /tutor shows until the scanner (feat-011) hands over a real cube:
+// a fixed random-move scramble solved by the Roux solver, so the page is the
+// same on every build and in tests. This scramble's solve touches most kinds
+// of step: free / join / insert pairs, a CMLL case with a pre-turn (Anti-Sune),
+// and all three LSE steps (arrow edge orientation).
+//
+// Only server code imports this (the /tutor page builds the lesson while it
+// is prerendered), so the solver stays out of the browser bundle.
+import type { Lesson } from "./lesson";
+import { rouxLesson } from "./rouxLesson";
 
-const DEMO_SOLVE: readonly { stage: RouxStageId; alg: string }[] = [
-  { stage: "fb", alg: "D' F' U L' U' L2" },
-  { stage: "sb", alg: "R' U' r U R U' r' U R" },
-  { stage: "cmll", alg: "R U R' U R U2 R'" },
-  { stage: "lse", alg: "M' U M U2 M' U M' U2 M2 U2" },
-];
+export const DEMO_SCRAMBLE = "F U R' D R' L' D' R' U F D' U F D L' B D2 U D' F L U2 L' D R2";
 
-const scramble = formatAlgorithm(invertAlgorithm(DEMO_SOLVE.flatMap(({ alg }) => toMoves(alg))));
-
-export const DEMO_LESSON = createLesson(scramble, DEMO_SOLVE);
+let demo: Lesson | undefined;
+/** The demo lesson, solved on first use (~300ms the first time, while the solver builds its tables). */
+export function demoLesson(): Lesson {
+  return (demo ??= rouxLesson(DEMO_SCRAMBLE));
+}

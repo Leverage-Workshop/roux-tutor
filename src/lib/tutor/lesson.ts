@@ -10,7 +10,7 @@ export interface RouxStage {
   name: string;
   /** Short label for the stage indicator. */
   short: string;
-  /** What the stage achieves; tutorial text until per-move explanations exist. */
+  /** What the stage achieves; tutorial text for moves without an explanation. */
   goal: string;
 }
 
@@ -50,14 +50,28 @@ export function stageById(id: RouxStageId): RouxStage {
 export interface TutorStep {
   move: Move;
   stage: RouxStageId;
-  /** Why this move is played. Optional until feat-010 adds explanations. */
+  /** Index into `lesson.phases`: the solver step this move belongs to. */
+  phase?: number;
+  /** Why this move is played (see explanations.ts). */
   explanation?: string;
+}
+
+/** One step of the solve, e.g. "Front pair: join corner and edge". */
+export interface LessonPhase {
+  /** Solver step id, e.g. "front-pair-join", "cmll", "lse-eo". */
+  id: string;
+  stage: RouxStageId;
+  name: string;
+  /** What the step achieves; for CMLL and LSE also how to recognize the case. */
+  goal: string;
 }
 
 export interface Lesson {
   /** Moves that take a solved cube to the starting position. */
   scramble: Move[];
   steps: TutorStep[];
+  /** The solve's steps; each move's `phase` points here. Absent for hand-made lessons. */
+  phases?: LessonPhase[];
 }
 
 /** Build a lesson from a scramble and one algorithm per stage, in order. */

@@ -2,26 +2,26 @@
 
 ## Current Objective
 
-- Goal: Roux Solver: LSE (feat-009)
-- Current status: Done. `solveLse(state)`, `isLseSolved`, `lseBadEdges` in `src/lib/solver/lse.ts`; the full chain `solveRoux(state)` in `src/lib/solver/roux.ts`
+- Goal: Move Explanations (feat-010)
+- Current status: Done. Every move of a Roux solve gets a dictionary explanation (`src/lib/tutor/explanations.ts`); `/tutor` plays the solver's solve of `DEMO_SCRAMBLE` with the explanation, step name and step goal in the drawer
 - Branch / commit: see `git log --oneline -1`
 
 ## Completed This Session
 
-- [x] LSE with U and M only, in three human phases: `lse-eo` (orient edges), `lse-ulur` (white-orange and white-red edges between their own corners), `lse-ep` (last four edges, centers, final top-layer turn)
-- [x] Each step carries `case { id, name, recognition }` (e.g. `eo-3-1` "arrow (3 bad on top, 1 on the bottom)", `ulur-top-bottom`, `ep-3-cycle-db`) and `centersOff`
-- [x] Distance tables over all 184,320 LSE states: every phase as short as possible; ties go to shorter later phases, then no same-layer step starts, then easier moves
-- [x] After EO no move makes an edge bad again (quarter U turns only while the white/yellow centers are up/down)
-- [x] `solveRoux` chains FB, SB, CMLL, LSE into `{ moves, stages: [{ stage, moves, steps }] }`; CMLL's last top-layer turn is left to LSE when that's not longer
+- [x] `EXPLANATIONS`: 79 templates keyed `<stage>.<step>.<what the move does>` (68 specific, 11 `.other` fallbacks never used by random solves); `explainRouxSolution(start, solution)` picks and fills one per move from what the move does on the cube
+- [x] `rouxLesson(scramble)` builds a `Lesson` from `solveRoux` with `phases` (solver steps) and per-move `phase` + `explanation`; `demoLesson()` / `DEMO_SCRAMBLE` replace the hand-written `DEMO_LESSON`
+- [x] `/tutor` solves the demo while prerendering (Server Component); the browser gets the lesson only, no solver code
+- [x] Drawer: big move, step name over the step's moves, explanation (drawer description), inline "About this step" toggle for the goal, scroll shadow when the text doesn't fit
 
 ## Verification Evidence
 
 | Check | Command | Result | Notes |
 |---|---|---|---|
-| Full harness | `./init.sh` | Pass | 204/204 tests (22 new) |
-| LSE | `lse.test.ts` | Pass | state-space counts; all 5,760 oriented states + 32 flip patterns x 180 sampled states + 3,000 random states, every phase checked move by move; exact arrow, 1-1, 4-0, 3-cycle, two-swap, centers-only, AUF, previous-move cases |
-| Chain | `roux.test.ts` | Pass | 120 seeded scrambles with slice/wide turns end solved; maps onto `createLesson` |
-| Speed / length | ad hoc benchmark, 1000 random cubes | full 48.1 moves avg (LSE 12.4), max 61 | LSE tables ~30-50ms first call, then median 0.05ms; full solve median 3ms |
+| Full harness | `./init.sh` | Pass | 215/215 tests (11 new), `/tutor` static |
+| Dictionary coverage | `explanations.test.ts` | Pass | 240 seeded solves, >10,000 moves, no fallback, every text led by its move, <= 240 chars; exact demo/R U R'/Sune/EO/EP/rotation texts |
+| Lesson | `demoLesson.test.ts`, `TutorScreen.test.tsx` | Pass | lesson = `solveRoux` output, stages complete their pieces; drawer updates explanation/step/goal on Next/Back; demo plays to solved |
+| Fallback search | ad hoc, 20,000 `Cube.random()` cubes | 0 fallbacks | length median 108, p99 199 chars |
+| Browser | Playwright on `next start`, 390x844 / 375x667 / 320x568, light + dark | Pass | sheet at 60%, no horizontal scroll, 47 distinct explanations, buttons always visible, no console errors; text fits on 44/47 moves at 390x844, scrolls inside the sheet on smaller phones |
 
 ## Files Changed
 
@@ -29,14 +29,13 @@
 
 ## Decisions Made
 
-- See "Decisions Made" in `progress.md` (phase-optimal LSE, edge orientation rule, EO kept, UL/UR may leave the top layer a half turn off, EP cases relative to the centers, CMLL post-AUF left to LSE in `solveRoux`)
+- See "Decisions Made" in `progress.md` (explanations computed from the cube with checked purpose claims, lighter per-move CMLL text, demo solved at build time, drawer layout, no New scramble yet)
 
 ## Blockers / Risks
 
-- The solver is not used by `/tutor` yet; the demo lesson is still hand-written (feat-010 or later)
-- Phase-by-phase LSE is sometimes longer than a combined solve (1-1 EO is 6 moves); accepted for teaching
-- `solveRoux` drops CMLL's `cmll-post-auf` when LSE does as well without it; revert by removing the second candidate in `solveRoux` if the owner wants CMLL to always end lined up
-- For explanations (feat-010): step ids across all stages are FB `orient`, `dl-edge`, `front|back-pair-free|join|insert`; SB `dr-edge`, `front|back-right-pair-free|join|insert`; CMLL `cmll-pre-auf`, `cmll`, `cmll-post-auf`; LSE `lse-eo`, `lse-ulur`, `lse-ep`. CMLL and LSE steps also have `case` (stable `id`, `name`, `recognition`); LSE steps have `centersOff`
+- Small phones (375x667 and below) usually need a short scroll for the explanation; options in `progress.md`
+- Rare SB insert quirk `U M U' r' U' R` (solver, ~0.07% of inserts) gets a truthful but odd explanation; fix belongs in `secondBlock.ts`
+- No way yet to solve a different cube on `/tutor` (New scramble / facelet entry); the solver would need to run in the browser or on a server route
 
 ## Next Session Startup
 
@@ -48,4 +47,4 @@
 
 ## Recommended Next Step
 
-- feat-010 move explanations: build the dictionary on step ids and cases, then load `solveRoux` output into the tutor (one lesson stage per Roux stage)
+- feat-005 Manual Facelet Entry (unblocked), then hand its cube to `/tutor` via `rouxLesson` (solver in the browser as a lazy chunk, or a server route)

@@ -3,7 +3,7 @@
 ## Current State
 
 **Last Updated:** 2026-10-28
-**Active Feature:** feat-009 - Roux Solver: LSE (done)
+**Active Feature:** feat-010 - Move Explanations (done)
 
 ## Status
 
@@ -36,7 +36,7 @@
   - `CubeNet.tsx`: flat 2D net of the store's facelets; since feat-004 it is the fallback when WebGL is unavailable
   - `TutorDrawer.tsx`: Base UI drawer, always open and non-modal, 40dvh, with stage indicator, stage name, move counter, next move in large type, the stage's move list, tutorial text, Back / Next move buttons
   - `src/lib/tutor/lesson.ts`: `ROUX_STAGES`, `TutorStep { move, stage, explanation? }`, `Lesson`, `createLesson`. Tutorial text is `step.explanation`, falling back to the stage goal (feat-010 fills explanations)
-  - `src/lib/tutor/demoLesson.ts`: demo Roux solve (32 moves); test proves each stage completes
+  - `src/lib/tutor/demoLesson.ts`: demo Roux solve (32 moves); test proves each stage completes (replaced in feat-010 by the solver's solve)
   - `createCubeStore(initial, moves)` and `<CubeStoreProvider moves>` load a move list up front, so the first render already shows the lesson
 
 - [x] feat-004 3D cube renderer on `/tutor`
@@ -68,13 +68,22 @@
   - `isLseSolved(state)` (every piece and center home, cube held the standard way; stricter than the model's `isSolved`), `lseBadEdges(state)` (bad slots, e.g. `["UR", "UL", "UB", "DB"]`), `lseStateCounts()` (for tests)
   - `solveRoux(state)` -> `{ moves, stages: [{ stage: "fb" | "sb" | "cmll" | "lse", moves, steps }] }` (always four stages, in order). Maps onto `createLesson(scramble, stages.map(s => ({ stage: s.stage, alg: formatAlgorithm(s.moves) })))`
 
+- [x] feat-010 move explanations, and `/tutor` now plays the Roux solver's solve
+  - `src/lib/tutor/explanations.ts`: `EXPLANATIONS` dictionary (79 templates: 68 specific + 11 per-step `.other` fallbacks that random solves never use), keys `<stage>.<step>.<what the move does>`, e.g. `fb.join.final`, `sb.insert.open`, `cmll.alg.breaks`, `lse.eo.flip`, `lse.ulur.spot`. `explainRouxSolution(start, solution)` -> one `{ key, text }` per move; `explain(key, vars)` fills `{placeholders}` and throws on a missing one; `moveHow(move)` ("right side up"); `cmllCaseLabel`
+  - How an entry is picked: the solve is played move by move; per stage the move is classified from the cube (pair pieces moved / joined / home, finished pieces lifted or put back, slot turned, stuck piece freed, block broken or rebuilt during an algorithm, bad edges before/after, UL/UR edges up/down/into their spot, centers). Claims about later moves are checked against the actual next moves
+  - `src/lib/tutor/rouxLesson.ts`: `rouxLesson(scramble)` -> `Lesson` with `phases` (one per solver step: id, stage, name, goal) and per move `phase` + `explanation`
+  - `src/lib/tutor/demoLesson.ts`: `DEMO_SCRAMBLE` (the feat-009 example scramble) and `demoLesson()` (memoized). The old hand-written `DEMO_LESSON` is gone
+  - `lesson.ts`: `TutorStep.phase`, `LessonPhase`, `Lesson.phases?` (hand-made lessons from `createLesson` still work without them)
+  - `/tutor` (`page.tsx`, Server Component) calls `demoLesson()` while prerendering; only the finished lesson reaches the browser
+  - `TutorDrawer`: big move + (step name over the step's moves), the move's explanation as the drawer description, an inline "About this step" toggle that shows the step goal (closes when the next step starts, scrolls into view), `.scroll-shadows` (globals.css) on the scroll area
+
 ### What's In Progress
 
 - Nothing
 
 ### What's Next
 
-1. feat-010 move explanations: key a dictionary on step ids (FB `orient`, `dl-edge`, `front|back-pair-free|join|insert`; SB `dr-edge`, `front|back-right-pair-free|join|insert`; CMLL `cmll-pre-auf`, `cmll`, `cmll-post-auf`; LSE `lse-eo`, `lse-ulur`, `lse-ep`) plus the `case` of CMLL/LSE steps, and replace the demo lesson on `/tutor` with `solveRoux` output
+1. "New scramble" / solve-your-own-cube on `/tutor` (skipped in feat-010): needs the solver in the browser as a lazy chunk (~300ms table build on first solve, more on slow phones; or a route handler / server action), a way to show the scramble so a learner can set up a real cube, and room in the header. Natural to do together with feat-005 (manual facelet entry) handing a cube to the tutor
 2. Save tutoring sessions from `/tutor`: if signed in, call `startTutoringSession` when a solve loads, `saveTutoringProgress` on Next/Back (debounced), `completeTutoringSession` at the end
 3. Optional for the 3D view: a "reset view" button after orbiting, and swiping on the cube to turn layers (the PRD's "interactions on the cube trigger visual layer rotations"; not part of feat-004)
 
@@ -85,12 +94,20 @@
 - [x] Human-style Roux solver (FB/SB) is the hardest part; no off-the-shelf library does it. Both blocks done (feat-006, feat-007)
 - [x] After FB+SB the M-slice centers are usually turned (~75% of random cubes); CMLL recognizes from corners only, LSE fixes the centers (feat-009)
 - [ ] LSE phases are each optimal on their own, so a step can be long where a combined solve would be shorter (e.g. a 1-1 EO case takes 6 moves; UL/UR up to ~9). Accepted: the owner wants human-style phases. EOLR-style lookahead (choosing EO by UL/UR) is only used to break ties between equally short EO solutions
+- [ ] Solver quirk seen while writing explanations: about 0.07% of SB inserts are `U M U' r' U' R` / `U M U' r U R'`, where `U M U'` leaves the pair where it was (not investigated; probably the search's rule that a step can't start on the layer the step before ended on). Explained as "turns only the middle slice ... readies the middle layer for the wide r turn", which is true but a human would just play `r' U' R`. Fix belongs in `secondBlock.ts` (e.g. allow the cancelling start or merge it with the join's last move)
+- [ ] On 375x667 and smaller phones most explanations need a short scroll inside the sheet (scroll shadow shows it). If the owner wants no scrolling there, options: drop the title row (the stage indicator already names the stage), or shorten the texts further
 - [ ] In `solveRoux` CMLL's `cmll-post-auf` turn is dropped when LSE does as well without it (see Decisions), so a `cmll-post-auf` step appears less often in full solves than in `solveCmll` alone
 - [ ] CMLL often starts on the layer SB ended on (13% of 1000 random cubes, e.g. SB's insert `... R'` then Sune's `R U R' ...`); a human would cancel those moves. Left as is: each case has one algorithm. If it bothers the owner, add mirrored/alternative algorithms per case and pick by the previous move
 - [ ] `fromFacelets` only checks format and that each corner/edge is a real piece. Full legality (each piece once, corner twist, edge flip, parity) is still to do in feat-005
 - [x] Fixed 2026-10-28: Claude's shell in the cloud container got Node 22 (`/opt/node22/bin` is on the default PATH and Claude's shell never reads `~/.bashrc`). `.claude/hooks/session-start.sh` (SessionStart hook, registered in `.claude/settings.json`) now writes `/opt/node24/bin` to the front of PATH via `$CLAUDE_ENV_FILE` and runs `npm install`. Takes effect for sessions that start from a branch containing the hook; no manual `export PATH` needed
 
 ## Decisions Made
+
+- **Explanations are computed from the cube, not hand-written per move** (feat-010): an entry is chosen by stage + step + case + what the move does on the cube at that point, so every solve the solver can produce gets specific text. Fallback entries (`.other`) exist per step type but 20,000 random cubes never used one; a test runs 240 seeded solves. Purpose statements that depend on later moves ("so the next M turn can take it down", "so the next turn doesn't trap it again", "a later right-side turn carries a pair piece back") are only used after checking those moves; otherwise a plainer factual entry is used.
+- **Per-move CMLL text is lighter**: "R' (right side down): move 3 of 7 of the Sune algorithm", plus whether this move takes a block apart or puts it back; the case's recognition stays in the step goal ("About this step"). S/AS cases use the Sune / Anti-Sune names learners know ("Anti-Sune 4").
+- **The demo lesson is solved at build time in the Server Component**, not shipped as a JSON fixture and not solved in the browser: `/tutor` stays static, the browser gets no solver code (checked `.next/static`), and a fixture can't drift from `solveRoux`. Cost: ~0.3-0.5s once per build/server start.
+- **Drawer layout for explanations**: the step name sits next to the big move above the step's moves (instead of the whole stage's moves), the explanation is the drawer's description, and the step goal is behind an inline "About this step" toggle so it doesn't take a row. At 390x844 the text fits on 44 of the demo's 47 moves; at 375x667 and smaller the area scrolls inside the sheet, with a CSS scroll shadow to show there's more. Buttons never move.
+- **No "New scramble" button yet**: see What's Next.
 
 - **LSE in three human phases, each as short as possible** (feat-009): EO (all six edges good), UL/UR (white-orange and white-red between their own corners), EP (last four edges, centers, final top-layer turn). Distance tables over the full LSE space (6 edges x flips x 4 center turns x 4 top-layer turns = 184,320 states) give every phase's shortest length; ties go to the plan with the shortest later phases, then to no step starting on the layer the step before ended on, then to easier moves (`moveEffort`). A full-LSE optimal solve was not used: it mixes the phases, which is not how Roux is taught.
 - **Edge orientation is judged with the middle slice turned back**: an edge is bad when its white/yellow sticker doesn't face up/down; while the slice is a quarter turn off (white/yellow centers front/back), the four middle-slice edges count the other way round. With this rule M turns never change an edge's status and a quarter U turn only does while the slice is off. Checked: 5,760 of the 184,320 states have all edges good, and all of them connect to solved without ever making an edge bad.
@@ -122,7 +139,7 @@
 - **Base UI replaces Vaul** (user's choice, 2026-10-28): Vaul's README says "This repo is unmaintained" (last release 1.1.2, Dec 2024), and 1.1.2 does not pass `modal={false}` to its Radix dialog, so its "non-modal" drawer hid the cube view from screen readers (`aria-hidden`) and trapped focus. `@base-ui/react` (1.9.0, monthly releases; shadcn/ui moved its drawer to it) passed the same checks: cube view not hidden, no focus trap, Escape/outside taps/drags leave the sheet in place.
 - **Tutor sheet setup**: `Drawer.Root open modal={false} disablePointerDismissal`, `Popup initialFocus={false} finalFocus={false}`, and no `Drawer.Viewport` (the part that adds swipe gestures), so the sheet can't be dragged away. Base UI portals mount only in the browser, so `TutorDrawer` also renders an `aria-hidden` empty sheet outline that the server includes in the HTML; the real sheet covers it once JavaScript runs (~0.25s locally). Known wart: Tab reaches an invisible Base UI focus guard after "Next move" before leaving the page.
 - **Tutor lives at `/tutor`**; `/` stays the landing page with a "Try a demo solve" link. The scanner (feat-011) will hand its result to the tutor later.
-- **Demo lesson until the solver exists**: scramble = inverse of a hand-written Roux solve. Its scramble contains M and r, which is fine because only the resulting state is used; net slice turns are zero, so centers start in the standard orientation.
+- **Demo lesson until the solver exists** (superseded by feat-010: `/tutor` now plays `solveRoux` on `DEMO_SCRAMBLE`): scramble = inverse of a hand-written Roux solve. Its scramble contains M and r, which is fine because only the resulting state is used; net slice turns are zero, so centers start in the standard orientation.
 
 - **Vaul over Ant Design Mobile** (2026-10-26, superseded by Base UI above): Vaul was smaller, built for touch drawers, and worked with Tailwind without a second design system. Base UI keeps those advantages.
 - **cubejs kept as the cube model**: supports M, r, and rotations, which Roux needs. Its `package.json` wrongly lists the whole `npm@6` CLI as a dependency (source of 42 audit warnings); an `overrides` entry in `package.json` swaps it for an empty package. Audit is now clean.
@@ -142,6 +159,7 @@
 
 ## Files Modified This Session
 
+- feat-010: `src/lib/tutor/explanations.ts`, `explanations.test.ts`, `rouxLesson.ts` (new); `demoLesson.ts`, `demoLesson.test.ts`, `lesson.ts`; `src/app/tutor/page.tsx`; `src/components/tutor/TutorDrawer.tsx`, `TutorScreen.test.tsx`; `src/app/globals.css` (`.scroll-shadows`); solver tests now use `DEMO_SCRAMBLE` (`firstBlock.test.ts`, `secondBlock.test.ts`, `roux.test.ts`); `feature_list.json`, `progress.md`, `session-handoff.md`
 - feat-009: `src/lib/solver/lse.ts`, `lse.test.ts`, `roux.ts`, `roux.test.ts` (new); `feature_list.json`, `progress.md`, `session-handoff.md`
 - feat-008: `src/lib/solver/cmllCases.ts`, `cmllCases.test.ts`, `cmll.ts`, `cmll.test.ts` (new); `feature_list.json`, `progress.md`, `session-handoff.md`
 - feat-007: `src/lib/solver/secondBlock.ts`, `secondBlock.test.ts` (new); `firstBlock.ts` (export `best`, generic `joinedPlacements`), `search.ts` (export `tableIndex`, `firstMove` option); `feature_list.json`, `progress.md`, `session-handoff.md`
@@ -149,6 +167,9 @@
 
 ## Evidence of Completion
 
+- [x] feat-010: `./init.sh` passes on Node 24: npm ci, typecheck, lint, 215/215 tests (11 new), build (`/tutor` static)
+- [x] feat-010: 240 seeded random solves (slice/wide turns, rotations; >10,000 moves) all get a specific entry; ad hoc 20,000 random-state cubes: no fallback used; explanation length median 108, p99 199, max 239 chars. Playwright on `next start` at 390x844, 375x667, 320x568, light and dark: sheet at 60%, no horizontal/page scroll, 47 distinct explanations stepping through, Back/Next in view on every move, goal toggle keeps the sheet in place, no console errors. Screenshots were kept outside the repo
+- Example (demo, front pair): `U` "moves the corner to the top front-left and the edge to the top front, side by side but not matching yet. 3 more turns to join them." / `r'` "moves the green-orange edge to the bottom front." / `U'` / `R'` "joins the yellow-green-orange corner and the green-orange edge ..." / `F` "slots the joined pair into the front-left. The first block is complete!"
 - [x] feat-009: `./init.sh` passes on Node 24: npm ci, typecheck, lint, 204/204 tests (22 new), build
 - [x] feat-009: every LSE state can finish every phase (table counts); all 5,760 oriented states and all 32 flip patterns x 180 sampled states solved, every phase checked move by move on the real cube (only U/M, edges good after EO and never bad again, UL/UR placed, cube solved); 3,000 random LSE states (11.2 moves average, max <= 20); 120 seeded scrambles with slice/wide turns through `solveRoux` end solved. Ad hoc benchmark, 1000 random-state cubes (`Cube.random`): full solve 48.1 moves average (FB 9.9, SB 15.1, CMLL 10.8, LSE 12.4), max 61; LSE max 18; phases: EO 5.2 moves (needed on 96%), UL/UR 5.4 (94%), EP 3.0 (76%); middle slice turned at LSE start on 77%. LSE tables ~30-50ms on first call, then median 0.05ms, max 1.2ms; full solve median 3ms (first ~280ms, FB tables)
 - Example (scramble `F U R' D R' L' D' R' U F D' U F D L' B D2 U D' F L U2 L' D R2`, 47 moves): ... CMLL `U'` / `R' U' R U' R' U2 R` (AS 1) / LSE `U M' U'` (EO, arrow) / `M U M2 U M' U2 M U` (UL/UR, both on top) / `M2` (EP, only the centers)

@@ -1,12 +1,14 @@
 "use client";
-// Persistent bottom sheet (bottom 40% of the screen): stage indicator, step
-// counter, the next move in large notation, tutorial text, and Back / Next
-// buttons sized for one thumb.
+// Persistent bottom sheet (bottom 40% of the screen): stage indicator, move
+// counter, the next move in large notation with the rest of its step, the
+// step's name, why the move is played (with the step's goal one tap away),
+// and Back / Next buttons sized for one thumb.
 //
 // A Base UI drawer that is always open and non-modal: the cube view above stays
 // usable, focus is not trapped, and outside taps or Escape don't close it.
 // Drawer.Viewport (which adds swipe gestures) is left out, so it can't be
 // dragged away.
+import { useEffect, useRef, useState } from "react";
 import { Drawer } from "@base-ui/react/drawer";
 import { useCubeStore } from "@/lib/cube/CubeStoreProvider";
 import { ROUX_STAGES, stageById, type Lesson, type RouxStageId } from "@/lib/tutor/lesson";
@@ -25,7 +27,22 @@ export function TutorDrawer({ lesson }: { lesson: Lesson }) {
   const finished = stepIndex >= total;
   const step = finished ? null : lesson.steps[stepIndex];
   const stage = step ? stageById(step.stage) : null;
-  const stageMoves = step ? lesson.steps.map((s, i) => ({ ...s, i })).filter((s) => s.stage === step.stage) : [];
+  // The solver step this move belongs to (lessons built by hand have none:
+  // then the move list shows the whole stage).
+  const phase = step?.phase !== undefined ? lesson.phases?.[step.phase] : undefined;
+  // The step goal opens per step: moving on to the next step closes it.
+  const [openGoal, setOpenGoal] = useState<number | null>(null);
+  const goalOpen = phase !== undefined && openGoal === step?.phase;
+  const goalRef = useRef<HTMLParagraphElement>(null);
+  // The goal opens below the explanation; bring it into view if the sheet is short.
+  useEffect(() => {
+    if (goalOpen) goalRef.current?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+  }, [goalOpen]);
+  const groupMoves = step
+    ? lesson.steps
+        .map((s, i) => ({ ...s, i }))
+        .filter((s) => (phase ? s.phase === step.phase : s.stage === step.stage))
+    : [];
 
   return (
     <>
@@ -51,9 +68,10 @@ export function TutorDrawer({ lesson }: { lesson: Lesson }) {
               </p>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+            {/* Scrolls (with a shadow at the cut edge) when the text doesn't fit. */}
+            <div className="scroll-shadows flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
               <div className="flex items-center gap-4">
-                <p className="min-w-[2.5ch] text-5xl leading-none font-bold tracking-tight [@media(max-height:700px)]:text-4xl">
+                <p className="min-w-[2.5ch] shrink-0 text-5xl leading-none font-bold tracking-tight [@media(max-height:700px)]:text-4xl">
                   {step ? (
                     <>
                       <span className="sr-only">Next move: </span>
@@ -63,31 +81,63 @@ export function TutorDrawer({ lesson }: { lesson: Lesson }) {
                     <span aria-hidden="true">✓</span>
                   )}
                 </p>
-                {stageMoves.length > 0 && (
-                  <ol aria-label="Moves in this stage" className="flex flex-wrap gap-x-1.5 gap-y-1 text-base font-medium">
-                    {stageMoves.map((s) => (
-                      <li
-                        key={s.i}
-                        aria-current={s.i === stepIndex ? "step" : undefined}
-                        className={
-                          s.i === stepIndex
-                            ? "rounded bg-foreground px-1 font-bold text-background"
-                            : s.i < stepIndex
-                              ? "px-1 text-zinc-400 dark:text-zinc-500"
-                              : "px-1"
-                        }
-                      >
-                        {s.move}
-                      </li>
-                    ))}
-                  </ol>
+                <div className="flex min-w-0 flex-col gap-1">
+                  {phase && (
+                    <p className="text-sm leading-tight font-semibold text-zinc-600 dark:text-zinc-400">
+                      <span className="sr-only">Step: </span>
+                      {phase.name}
+                    </p>
+                  )}
+                  {groupMoves.length > 0 && (
+                    <ol
+                      aria-label={phase ? "Moves in this step" : "Moves in this stage"}
+                      className="flex flex-wrap gap-x-1.5 gap-y-1 text-base font-medium"
+                    >
+                      {groupMoves.map((s) => (
+                        <li
+                          key={s.i}
+                          aria-current={s.i === stepIndex ? "step" : undefined}
+                          className={
+                            s.i === stepIndex
+                              ? "rounded bg-foreground px-1 font-bold text-background"
+                              : s.i < stepIndex
+                                ? "px-1 text-zinc-400 dark:text-zinc-500"
+                                : "px-1"
+                          }
+                        >
+                          {s.move}
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </div>
+              </div>
+              <div className="text-base text-zinc-800 dark:text-zinc-200 [@media(max-height:700px)]:text-sm">
+                <Drawer.Description className="inline">
+                  {step
+                    ? (step.explanation ?? stage?.goal)
+                    : "The cube is solved. Step back through any stage to see it again."}
+                </Drawer.Description>
+                {phase && (
+                  <>
+                    {" "}
+                    <button
+                      type="button"
+                      aria-expanded={goalOpen}
+                      aria-controls="tutor-step-goal"
+                      onClick={() => setOpenGoal(goalOpen ? null : (step?.phase ?? null))}
+                      className="inline font-medium whitespace-nowrap text-zinc-600 underline underline-offset-2 dark:text-zinc-400"
+                    >
+                      {goalOpen ? "Hide step goal" : "About this step"}
+                    </button>
+                  </>
                 )}
               </div>
-              <Drawer.Description className="text-base text-zinc-700 dark:text-zinc-300 [@media(max-height:700px)]:text-sm">
-                {step
-                  ? (step.explanation ?? stage?.goal)
-                  : "The cube is solved. Step back through any stage to see it again."}
-              </Drawer.Description>
+              {phase && (
+                <p ref={goalRef} id="tutor-step-goal" hidden={!goalOpen} className="text-sm text-zinc-600 dark:text-zinc-400">
+                  {phase.goal}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-[1fr_2fr] gap-3">

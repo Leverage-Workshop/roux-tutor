@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { applyMoves, solvedState, type CubeState } from "@/lib/cube/model";
 import { parseAlgorithm, type Move } from "@/lib/cube/notation";
-import { DEMO_LESSON } from "@/lib/tutor/demoLesson";
+import { DEMO_SCRAMBLE } from "@/lib/tutor/demoLesson";
 import { isFirstBlockSolved, orientationMoves, solveFirstBlock } from "./firstBlock";
 import { CORNERS, EDGES, homeCoord, pieceCoord, type TrackedPiece } from "./pieces";
 
@@ -168,7 +168,7 @@ describe("solveFirstBlock", () => {
   });
 
   it("solves the demo lesson's scramble", () => {
-    const demoStart = applyMoves(solvedState(), DEMO_LESSON.scramble);
+    const demoStart = applyMoves(solvedState(), DEMO_SCRAMBLE);
     const solution = solveFirstBlock(demoStart);
     expect(isFirstBlockSolved(applyMoves(demoStart, solution.moves))).toBe(true);
   });
