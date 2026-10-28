@@ -3,7 +3,7 @@
 ## Current State
 
 **Last Updated:** 2026-10-28
-**Active Feature:** feat-003 - Mobile Viewport Layout (done)
+**Active Feature:** feat-004 - 3D Cube Renderer (done)
 
 ## Status
 
@@ -33,11 +33,18 @@
 - [x] feat-003 mobile viewport layout at `/tutor` (linked from `/`)
   - `src/app/tutor/page.tsx`: metadata, `viewportFit: "cover"` for the safe-area padding, renders `<TutorScreen lesson={DEMO_LESSON} />`
   - `src/components/tutor/TutorScreen.tsx`: `<CubeStoreProvider>` seeded with the lesson; top 60dvh = header (home link, `AuthButton`) + `CubeNet`; bottom = `TutorDrawer`
-  - `CubeNet.tsx`: flat 2D net of the store's facelets. feat-004 replaces it with the R3F canvas in the same slot
+  - `CubeNet.tsx`: flat 2D net of the store's facelets; since feat-004 it is the fallback when WebGL is unavailable
   - `TutorDrawer.tsx`: Base UI drawer, always open and non-modal, 40dvh, with stage indicator, stage name, move counter, next move in large type, the stage's move list, tutorial text, Back / Next move buttons
   - `src/lib/tutor/lesson.ts`: `ROUX_STAGES`, `TutorStep { move, stage, explanation? }`, `Lesson`, `createLesson`. Tutorial text is `step.explanation`, falling back to the stage goal (feat-010 fills explanations)
   - `src/lib/tutor/demoLesson.ts`: demo Roux solve (32 moves); test proves each stage completes
   - `createCubeStore(initial, moves)` and `<CubeStoreProvider moves>` load a move list up front, so the first render already shows the lesson
+
+- [x] feat-004 3D cube renderer on `/tutor`
+  - `src/lib/cube/geometry.ts`: `STICKERS` (54, with cubelet position and outward normal, three.js axes: +x = R, +y = U, +z = F), `CUBELETS` (27), `turnSpec(move)` (axis, layers, signed quarter turns) for every move cubejs supports
+  - `src/lib/cube/turnAnimator.ts`: `createTurnAnimator` shows the pre-move state while the turning layer rotates, then the new state; queues taps that arrive mid-turn and plays them faster; `snap` for jumps; duration 0 for reduced motion. `followCubeStore(store, animator)` feeds store changes in (single moves animate, everything else snaps)
+  - `src/components/cube3d/Cube3D.tsx`: R3F canvas, shared geometry/materials, `OrbitControls` (no pan/zoom), `FitCamera` keeps the cube in view at any aspect, `frameloop="demand"`
+  - `src/components/tutor/CubeView.tsx`: lazy-loads `Cube3D` (`next/dynamic`, `ssr: false`), falls back to `CubeNet` without WebGL or if the 3D view throws
+  - `useCubeStoreApi()` added to `CubeStoreProvider.tsx` (the renderer subscribes with before/after state)
 
 ### What's In Progress
 
@@ -46,7 +53,8 @@
 ### What's Next
 
 1. Save tutoring sessions from `/tutor`: if signed in, call `startTutoringSession` when a solve loads, `saveTutoringProgress` on Next/Back (debounced), `completeTutoringSession` at the end
-2. feat-004 3D Cube Renderer (swap `CubeNet` for the canvas in `TutorScreen`; animate from the store's `lastTurn`), feat-005 Manual Facelet Entry, or feat-006 First Block solver
+2. feat-005 Manual Facelet Entry, or feat-006 First Block solver
+3. Optional for the 3D view: a "reset view" button after orbiting, and swiping on the cube to turn layers (the PRD's "interactions on the cube trigger visual layer rotations"; not part of feat-004)
 
 ## Blockers / Risks
 
@@ -57,6 +65,10 @@
 - [x] Fixed 2026-10-28: Claude's shell in the cloud container got Node 22 (`/opt/node22/bin` is on the default PATH and Claude's shell never reads `~/.bashrc`). `.claude/hooks/session-start.sh` (SessionStart hook, registered in `.claude/settings.json`) now writes `/opt/node24/bin` to the front of PATH via `$CLAUDE_ENV_FILE` and runs `npm install`. Takes effect for sessions that start from a branch containing the hook; no manual `export PATH` needed
 
 ## Decisions Made
+
+- **3D turn animation** (feat-004): the store changes state immediately; the renderer keeps drawing the old state and rotates the moving layer, then swaps to the new state. `geometry.test.ts` proves that for all 54 moves the turned layer lands exactly on cubejs's new state, so the swap can't flicker. Turning cubelets live in a fresh `<group key>` per turn; while React catches up after a turn ends, the group is held at its end angle.
+- **Flat net kept as the fallback** when WebGL is missing or the 3D chunk fails to load (e.g. offline). jsdom has no WebGL, so `TutorScreen.test.tsx` runs against the net.
+- **Known warning**: R3F 9.8 uses `THREE.Clock`, which three r186 marks deprecated (console warning, harmless). Goes away when R3F switches to `THREE.Timer`.
 
 - **Base UI replaces Vaul** (user's choice, 2026-10-28): Vaul's README says "This repo is unmaintained" (last release 1.1.2, Dec 2024), and 1.1.2 does not pass `modal={false}` to its Radix dialog, so its "non-modal" drawer hid the cube view from screen readers (`aria-hidden`) and trapped focus. `@base-ui/react` (1.9.0, monthly releases; shadcn/ui moved its drawer to it) passed the same checks: cube view not hidden, no focus trap, Escape/outside taps/drags leave the sheet in place.
 - **Tutor sheet setup**: `Drawer.Root open modal={false} disablePointerDismissal`, `Popup initialFocus={false} finalFocus={false}`, and no `Drawer.Viewport` (the part that adds swipe gestures), so the sheet can't be dragged away. Base UI portals mount only in the browser, so `TutorDrawer` also renders an `aria-hidden` empty sheet outline that the server includes in the HTML; the real sheet covers it once JavaScript runs (~0.25s locally). Known wart: Tab reaches an invisible Base UI focus guard after "Next move" before leaving the page.
@@ -81,12 +93,12 @@
 
 ## Files Modified This Session
 
-- `.claude/hooks/session-start.sh`, `.claude/settings.json`, `src/app/tutor/*`, `src/components/tutor/*`, `src/lib/tutor/*` (new); `src/lib/cube/store.ts`, `src/lib/cube/CubeStoreProvider.tsx`, `src/lib/cube/store.test.ts`, `src/app/page.tsx`, `src/app/page.test.tsx`, `src/lib/stack.smoke.test.ts`, `package.json`, `package-lock.json`, `docs/PRODUCT.md`, `AGENTS.md`, `feature_list.json`, `progress.md`, `session-handoff.md`
+- `src/lib/cube/geometry.ts`, `src/lib/cube/turnAnimator.ts`, `src/components/cube3d/Cube3D.tsx`, `src/components/tutor/CubeView.tsx` and their tests (new); `src/lib/cube/CubeStoreProvider.tsx`, `src/components/tutor/TutorScreen.tsx`, `TutorScreen.test.tsx`, `CubeNet.tsx`, `feature_list.json`, `progress.md`, `session-handoff.md`
 
 ## Evidence of Completion
 
-- [x] `./init.sh` passes on Node 24: npm ci, typecheck, lint, 63/63 tests, build (`/tutor` static); `npm audit` 0 vulnerabilities
-- [x] Playwright against `next start`: sheet starts at exactly 60% height at 390x844 and 375x667, light and dark, no horizontal scroll, no console errors; stepping through every stage to "Solved" works; with Base UI: cube view not `aria-hidden`, no focus trap, Escape / outside tap / drag leave the sheet in place
+- [x] `./init.sh` passes on Node 24: npm ci, typecheck, lint, 134/134 tests, build (`/tutor` static)
+- [x] Playwright (SwiftShader WebGL) against `next start`: 3D cube at 390x844 (light, dark) and 375x667; mid-turn frame; drag orbits; rapid taps end pixel-identical to slow taps; all 32 demo moves end solved; reduced motion skips the animation; no console errors; three.js not in `/tutor`'s initial scripts
 
 ## Notes for Next Session
 

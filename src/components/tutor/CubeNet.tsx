@@ -1,6 +1,6 @@
 "use client";
-// Flat map of all six faces, drawn from the cube store. Stands in for the 3D
-// canvas until feat-004 replaces it.
+// Flat map of all six faces, drawn from the cube store. Shown instead of the
+// 3D cube when the browser has no WebGL (see CubeView).
 import { FACES, FACE_COLOR, STICKER_HEX, type Face } from "@/lib/cube/model";
 import { useCubeStore } from "@/lib/cube/CubeStoreProvider";
 

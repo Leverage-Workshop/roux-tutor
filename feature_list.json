@@ -29,8 +29,8 @@
       "name": "3D Cube Renderer",
       "description": "R3F canvas with 27 cubelets colored from the cube state store. Drei OrbitControls for touch camera rotation; animated layer turns when stepping moves",
       "dependencies": ["feat-002", "feat-003"],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "2026-10-28: /tutor's cube view is now 3D (src/components/cube3d/Cube3D.tsx, loaded by src/components/tutor/CubeView.tsx). 27 rounded cubelets with stickers colored from the store's facelets; drei OrbitControls (one-finger drag, no pan/zoom); camera distance fits the cube to any canvas shape. Next/Back animate one layer turn (0.28s, eased); taps mid-turn queue and play faster; jumps snap; prefers-reduced-motion snaps. Canvas draws only on change (frameloop=demand, dpr capped at 2). No WebGL or a failed load falls back to the old 2D CubeNet. three.js ships in its own lazy chunk (~247KB gz), not in /tutor's initial scripts. Logic in pure modules: src/lib/cube/geometry.ts (sticker positions, move -> axis/layers/quarter turns) and turnAnimator.ts (turn queue + followCubeStore). ./init.sh passed (typecheck, lint, 134/134 tests incl. 58 geometry tests proving the turned layers land on cubejs's state for all 54 moves, 10 animator tests, 3 CubeView tests; next build, /tutor static). Playwright (SwiftShader WebGL) on next start: renders at 390x844 light/dark and 375x667, mid-turn frame shows the D layer turning, drag orbits the camera, 8 rapid taps + 2 Backs give a pixel-identical canvas to slow taps, all 32 moves end on a solved cube, reduced motion shows the final state within 60ms, no horizontal scroll, no console errors (one THREE.Clock deprecation warning from inside R3F)."
     },
     {
       "id": "feat-005",

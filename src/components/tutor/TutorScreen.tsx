@@ -7,7 +7,7 @@ import { AuthButton } from "@/components/AuthButton";
 import { CubeStoreProvider } from "@/lib/cube/CubeStoreProvider";
 import { applyMoves, solvedState } from "@/lib/cube/model";
 import type { Lesson } from "@/lib/tutor/lesson";
-import { CubeNet } from "./CubeNet";
+import { CubeView } from "./CubeView";
 import { TutorDrawer } from "./TutorDrawer";
 
 export function TutorScreen({ lesson }: { lesson: Lesson }) {
@@ -22,8 +22,8 @@ export function TutorScreen({ lesson }: { lesson: Lesson }) {
             </Link>
             <AuthButton />
           </header>
-          <div className="flex min-h-0 flex-1 items-center justify-center px-4 pb-4">
-            <CubeNet />
+          <div className="min-h-0 flex-1">
+            <CubeView />
           </div>
         </section>
         <TutorDrawer lesson={lesson} />
