@@ -2,26 +2,24 @@
 
 ## Current Objective
 
-- Goal: Mobile Viewport Layout (feat-003)
-- Current status: Done. Demo tutor at `/tutor`
+- Goal: 3D Cube Renderer (feat-004)
+- Current status: Done. `/tutor` shows a 3D cube with animated turns
 - Branch / commit: see `git log --oneline -1`
 
 ## Completed This Session
 
-- [x] SessionStart hook so cloud sessions use Node 24 without a manual PATH export
-- [x] `/tutor`: 60% cube view (2D net placeholder) + 40% fixed sheet with stages, counter, notation, text, Back / Next
-- [x] Demo Roux lesson with a test that each stage completes
-- [x] Store can start with a move list loaded
-- [x] Replaced unmaintained Vaul with Base UI; the tutor sheet is a non-modal Base UI drawer
+- [x] R3F cube with 27 cubelets colored from the store, drag to orbit
+- [x] Animated layer turns on Next / Back (queued when tapping fast, skipped with reduced motion)
+- [x] Lazy-loaded three.js; flat net fallback without WebGL
+- [x] Tests proving each move's animation ends on cubejs's state
 
 ## Verification Evidence
 
 | Check | Command | Result | Notes |
 |---|---|---|---|
-| Full harness | `./init.sh` | Pass | 63/63 tests, `/tutor` static |
-| Drawer a11y | Playwright | Pass | Cube view not hidden, no focus trap, Escape/tap/drag keep it open |
-| Layout | Playwright + `next start` | Pass | 60/40 split at 390x844 and 375x667, light/dark, no horizontal scroll |
-| Stepping | Playwright | Pass | All stages to "Solved", text fits at 375x667 |
+| Full harness | `./init.sh` | Pass | 134/134 tests, `/tutor` static |
+| 3D view | Playwright + `next start` | Pass | 390x844 light/dark, 375x667, orbit, mid-turn frame, no console errors |
+| Turn animation | Playwright | Pass | Rapid taps match slow taps pixel for pixel; full demo ends solved; reduced motion snaps |
 
 ## Files Changed
 
@@ -29,11 +27,11 @@
 
 ## Decisions Made
 
-- See "Decisions Made" in `progress.md` (Base UI replaced Vaul; `/tutor` route; demo lesson)
+- See "Decisions Made" in `progress.md` (turn animation approach, flat net fallback)
 
 ## Blockers / Risks
 
-- None new
+- R3F logs a harmless `THREE.Clock` deprecation warning with three r186
 
 ## Next Session Startup
 
@@ -45,4 +43,4 @@
 
 ## Recommended Next Step
 
-- Save tutoring sessions from `/tutor` for signed-in users, or feat-004 3D Cube Renderer (replace `CubeNet` in `TutorScreen`)
+- Save tutoring sessions from `/tutor` for signed-in users, feat-005 Manual Facelet Entry, or feat-006 First Block solver

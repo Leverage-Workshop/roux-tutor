@@ -28,7 +28,15 @@ export function CubeStoreProvider({
  * that builds a new object or array on every call re-renders forever.
  */
 export function useCubeStore<T>(selector: (state: CubeStore) => T): T {
+  return useStore(useCubeStoreApi(), selector);
+}
+
+/**
+ * The store itself, for code that subscribes outside React's render cycle
+ * (the 3D renderer needs each change's before and after state).
+ */
+export function useCubeStoreApi(): CubeStoreApi {
   const store = useContext(CubeStoreContext);
   if (!store) throw new Error("useCubeStore must be used inside <CubeStoreProvider>");
-  return useStore(store, selector);
+  return store;
 }

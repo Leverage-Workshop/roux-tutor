@@ -1,11 +1,21 @@
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLesson } from "@/lib/tutor/lesson";
 import { TutorScreen } from "./TutorScreen";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
-afterEach(cleanup);
+// jsdom has no WebGL, so the cube view shows the flat net (CubeView's fallback),
+// which these tests read stickers from. Stubbing getContext skips jsdom's
+// "not implemented" warning.
+beforeEach(() => {
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+});
+
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 // Two stages, three moves: enough to cross a stage boundary and reach the end.
 const LESSON = createLesson("R U' R'", [
