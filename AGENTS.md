@@ -9,7 +9,7 @@ Roux Tutor: a mobile-first Next.js app that teaches the Roux method for solving 
 | Runtime | Node 24 (`.nvmrc`, `engines`) | Matches Vercel; use `nvm use` locally |
 | Framework | Next.js 16 (App Router, `src/`), React 19, TypeScript | Read `node_modules/next/dist/docs/` before using Next APIs (see Next.js Rules below) |
 | State | `zustand` | Shared between 3D canvas and HTML UI |
-| Styling / UI | Tailwind CSS 4, `vaul` | Vaul only for sheets that open and close. The tutor's always-open bottom sheet is a plain `<section>`: Vaul 1.1.2 ignores `modal={false}` and would trap focus |
+| Styling / UI | Tailwind CSS 4, `@base-ui/react` | Base UI `Drawer` for bottom sheets (import from `@base-ui/react/drawer`). Vaul was dropped: unmaintained, and it ignored `modal={false}` |
 | 3D | `three`, `@react-three/fiber`, `@react-three/drei` | Use drei `<OrbitControls>` for touch camera |
 | Vision | `@techstark/opencv-js` | ~10MB WASM; lazy-load in the browser only, never import at module top level of shared code |
 | Cube model | `cubejs` | Supports U R F D L B, M E S, r u f d l b, x y z. Types in `src/types/cubejs.d.ts`. Do NOT use its Kociemba `solve()` for teaching output |

@@ -13,7 +13,7 @@
 - [x] Created harness: `AGENTS.md` (imported by `CLAUDE.md`), `feature_list.json`, `progress.md`, `session-handoff.md`, `init.sh`
 - [x] Saved PRD to `docs/PRODUCT.md`
 - [x] Scaffolded Next.js 16 app (TypeScript, Tailwind 4, ESLint, App Router, `src/`)
-- [x] Installed PRD stack: zustand, three, @react-three/fiber, @react-three/drei, vaul, @techstark/opencv-js, cubejs, @supabase/supabase-js, @supabase/ssr
+- [x] Installed PRD stack: zustand, three, @react-three/fiber, @react-three/drei, vaul (replaced by @base-ui/react on 2026-10-28), @techstark/opencv-js, cubejs, @supabase/supabase-js, @supabase/ssr
 - [x] Added Vitest + Testing Library and a stack smoke test
 - [x] feat-014: placeholder landing page at `/` (`src/app/page.tsx`, test in `src/app/page.test.tsx`), site title/description set in `layout.tsx`, body uses Geist font
 - [x] feat-013: Vercel project `roux-tutor` linked to GitHub; push to `main` deploys production, other branches get preview URLs. Live at https://rouxtutor.leverageworkshop.com (Cloudflare CNAME, DNS only)
@@ -34,7 +34,7 @@
   - `src/app/tutor/page.tsx`: metadata, `viewportFit: "cover"` for the safe-area padding, renders `<TutorScreen lesson={DEMO_LESSON} />`
   - `src/components/tutor/TutorScreen.tsx`: `<CubeStoreProvider>` seeded with the lesson; top 60dvh = header (home link, `AuthButton`) + `CubeNet`; bottom = `TutorDrawer`
   - `CubeNet.tsx`: flat 2D net of the store's facelets. feat-004 replaces it with the R3F canvas in the same slot
-  - `TutorDrawer.tsx`: fixed 40dvh sheet with stage indicator, stage name, move counter, next move in large type, the stage's move list, tutorial text, Back / Next move buttons
+  - `TutorDrawer.tsx`: Base UI drawer, always open and non-modal, 40dvh, with stage indicator, stage name, move counter, next move in large type, the stage's move list, tutorial text, Back / Next move buttons
   - `src/lib/tutor/lesson.ts`: `ROUX_STAGES`, `TutorStep { move, stage, explanation? }`, `Lesson`, `createLesson`. Tutorial text is `step.explanation`, falling back to the stage goal (feat-010 fills explanations)
   - `src/lib/tutor/demoLesson.ts`: demo Roux solve (32 moves); test proves each stage completes
   - `createCubeStore(initial, moves)` and `<CubeStoreProvider moves>` load a move list up front, so the first render already shows the lesson
@@ -58,11 +58,12 @@
 
 ## Decisions Made
 
-- **Tutor's bottom sheet is a plain `<section>`, not Vaul** (2026-10-28): Vaul 1.1.2 (latest; no release since Dec 2024) does not pass `modal={false}` to its Radix dialog, so the "non-modal" drawer still set `aria-hidden` on the cube view and header and trapped keyboard focus. The sheet never opens, closes or drags, so Vaul added nothing. Vaul stays installed for future sheets that do open and close.
+- **Base UI replaces Vaul** (user's choice, 2026-10-28): Vaul's README says "This repo is unmaintained" (last release 1.1.2, Dec 2024), and 1.1.2 does not pass `modal={false}` to its Radix dialog, so its "non-modal" drawer hid the cube view from screen readers (`aria-hidden`) and trapped focus. `@base-ui/react` (1.9.0, monthly releases; shadcn/ui moved its drawer to it) passed the same checks: cube view not hidden, no focus trap, Escape/outside taps/drags leave the sheet in place.
+- **Tutor sheet setup**: `Drawer.Root open modal={false} disablePointerDismissal`, `Popup initialFocus={false} finalFocus={false}`, and no `Drawer.Viewport` (the part that adds swipe gestures), so the sheet can't be dragged away. Base UI portals mount only in the browser, so `TutorDrawer` also renders an `aria-hidden` empty sheet outline that the server includes in the HTML; the real sheet covers it once JavaScript runs (~0.25s locally). Known wart: Tab reaches an invisible Base UI focus guard after "Next move" before leaving the page.
 - **Tutor lives at `/tutor`**; `/` stays the landing page with a "Try a demo solve" link. The scanner (feat-011) will hand its result to the tutor later.
 - **Demo lesson until the solver exists**: scramble = inverse of a hand-written Roux solve. Its scramble contains M and r, which is fine because only the resulting state is used; net slice turns are zero, so centers start in the standard orientation.
 
-- **Vaul over Ant Design Mobile**: PRD allows either. Vaul is smaller, built for touch drawers, and works with Tailwind without a second design system.
+- **Vaul over Ant Design Mobile** (2026-10-26, superseded by Base UI above): Vaul was smaller, built for touch drawers, and worked with Tailwind without a second design system. Base UI keeps those advantages.
 - **cubejs kept as the cube model**: supports M, r, and rotations, which Roux needs. Its `package.json` wrongly lists the whole `npm@6` CLI as a dependency (source of 42 audit warnings); an `overrides` entry in `package.json` swaps it for an empty package. Audit is now clean.
 - **Node 24** (`engines` in `package.json`, `.nvmrc`, `@types/node` ^24): Vercel's default and LTS until Apr 2028. Node 26 is not on Vercel yet. The cloud environment needs a setup script that installs Node 24 (its image ships Node 22).
 - **npm 11 install scripts**: npm 11 blocks dependency install scripts by default. `unrs-resolver`'s postinstall is skipped; harmless, since its native binding installs as an optional dependency and lint passes.
@@ -80,12 +81,12 @@
 
 ## Files Modified This Session
 
-- `.claude/hooks/session-start.sh`, `.claude/settings.json`, `src/app/tutor/*`, `src/components/tutor/*`, `src/lib/tutor/*` (new); `src/lib/cube/store.ts`, `src/lib/cube/CubeStoreProvider.tsx`, `src/lib/cube/store.test.ts`, `src/app/page.tsx`, `src/app/page.test.tsx`, `AGENTS.md`, `feature_list.json`, `progress.md`, `session-handoff.md`
+- `.claude/hooks/session-start.sh`, `.claude/settings.json`, `src/app/tutor/*`, `src/components/tutor/*`, `src/lib/tutor/*` (new); `src/lib/cube/store.ts`, `src/lib/cube/CubeStoreProvider.tsx`, `src/lib/cube/store.test.ts`, `src/app/page.tsx`, `src/app/page.test.tsx`, `src/lib/stack.smoke.test.ts`, `package.json`, `package-lock.json`, `docs/PRODUCT.md`, `AGENTS.md`, `feature_list.json`, `progress.md`, `session-handoff.md`
 
 ## Evidence of Completion
 
-- [x] `./init.sh` passes on Node 24: npm ci, typecheck, lint, 62/62 tests, build (`/tutor` static)
-- [x] Playwright against `next start`: sheet starts at exactly 60% height at 390x844 and 375x667, light and dark, no horizontal scroll, no console errors; stepping through every stage to "Solved" works
+- [x] `./init.sh` passes on Node 24: npm ci, typecheck, lint, 63/63 tests, build (`/tutor` static); `npm audit` 0 vulnerabilities
+- [x] Playwright against `next start`: sheet starts at exactly 60% height at 390x844 and 375x667, light and dark, no horizontal scroll, no console errors; stepping through every stage to "Solved" works; with Base UI: cube view not `aria-hidden`, no focus trap, Escape / outside tap / drag leave the sheet in place
 
 ## Notes for Next Session
 

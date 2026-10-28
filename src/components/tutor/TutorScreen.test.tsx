@@ -72,4 +72,24 @@ describe("TutorScreen", () => {
       expect(colors.size).toBe(1);
     }
   });
+
+  it("keeps the sheet open and non-modal: cube view visible, focus free, Escape and outside taps ignored", () => {
+    const ui = setup();
+    const cube = screen.getByRole("region", { name: "Cube" });
+    expect(cube.closest("[aria-hidden='true'], [inert]")).toBeNull();
+    expect(screen.getByRole("dialog", { name: "First Block" })).toBeDefined();
+
+    const home = screen.getByRole("link", { name: "Roux Tutor" });
+    act(() => home.focus());
+    expect(document.activeElement).toBe(home);
+
+    act(() => {
+      fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+      fireEvent.pointerDown(cube);
+      fireEvent.mouseDown(cube);
+      fireEvent.click(cube);
+    });
+    ui.next();
+    expect(screen.getByText("Move 2 of 3")).toBeDefined();
+  });
 });

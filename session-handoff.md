@@ -12,12 +12,14 @@
 - [x] `/tutor`: 60% cube view (2D net placeholder) + 40% fixed sheet with stages, counter, notation, text, Back / Next
 - [x] Demo Roux lesson with a test that each stage completes
 - [x] Store can start with a move list loaded
+- [x] Replaced unmaintained Vaul with Base UI; the tutor sheet is a non-modal Base UI drawer
 
 ## Verification Evidence
 
 | Check | Command | Result | Notes |
 |---|---|---|---|
-| Full harness | `./init.sh` | Pass | 62/62 tests, `/tutor` static |
+| Full harness | `./init.sh` | Pass | 63/63 tests, `/tutor` static |
+| Drawer a11y | Playwright | Pass | Cube view not hidden, no focus trap, Escape/tap/drag keep it open |
 | Layout | Playwright + `next start` | Pass | 60/40 split at 390x844 and 375x667, light/dark, no horizontal scroll |
 | Stepping | Playwright | Pass | All stages to "Solved", text fits at 375x667 |
 
@@ -27,7 +29,7 @@
 
 ## Decisions Made
 
-- See "Decisions Made" in `progress.md` (plain section instead of Vaul; `/tutor` route; demo lesson)
+- See "Decisions Made" in `progress.md` (Base UI replaced Vaul; `/tutor` route; demo lesson)
 
 ## Blockers / Risks
 
