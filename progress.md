@@ -3,7 +3,7 @@
 ## Current State
 
 **Last Updated:** 2026-10-28
-**Active Feature:** feat-008 - Roux Solver: CMLL (done)
+**Active Feature:** feat-009 - Roux Solver: LSE (done)
 
 ## Status
 
@@ -62,13 +62,19 @@
   - `solveCmll(state)` -> `{ moves, steps, case }` for a cube with both blocks solved (throws otherwise). Steps (only those with moves): `cmll-pre-auf` (one U turn), `cmll` (the algorithm; `step.case` holds the case), `cmll-post-auf` (one U turn; alone it's a CMLL skip). Corners end solved relative to the blocks
   - `isCmllSolved(state)` (both blocks + top corners home and twisted right; M edges/centers ignored), `solveThroughCmll(state)` -> `{ moves, firstBlock, secondBlock, cmll }`
 
+- [x] feat-009 LSE solver in `src/lib/solver/lse.ts` + full chain in `roux.ts`
+  - `solveLse(state, { previousMove? })` -> `{ moves, steps }` for a cube whose blocks and top corners are solved (the top layer may be turned; throws otherwise). U and M only. Steps (only those with moves): `lse-eo`, `lse-ulur`, `lse-ep`; each has `name`, `goal`, `moves`, `case { id, name, recognition }` and `centersOff` (M turns the centers are off at the step's start). Ends with every piece and center solved, standard orientation
+  - Case ids: EO `eo-1-1`, `eo-2-0-adjacent|opposite`, `eo-0-2`, `eo-3-1` (arrow), `eo-4-0`, `eo-2-2-adjacent|opposite`, `eo-6-flip`; UL/UR `ulur-top-auf`, `ulur-both-top`, `ulur-top-bottom`, `ulur-both-bottom`; EP `ep-centers`, `ep-3-cycle-uf|df|db|ub` (named by the edge already in place), `ep-swap-front-back|top-bottom|diagonal`
+  - `isLseSolved(state)` (every piece and center home, cube held the standard way; stricter than the model's `isSolved`), `lseBadEdges(state)` (bad slots, e.g. `["UR", "UL", "UB", "DB"]`), `lseStateCounts()` (for tests)
+  - `solveRoux(state)` -> `{ moves, stages: [{ stage: "fb" | "sb" | "cmll" | "lse", moves, steps }] }` (always four stages, in order). Maps onto `createLesson(scramble, stages.map(s => ({ stage: s.stage, alg: formatAlgorithm(s.moves) })))`
+
 ### What's In Progress
 
 - Nothing
 
 ### What's Next
 
-1. feat-009 LSE: start from `solveThroughCmll(state)`. Corners are solved relative to the blocks; left are the six edges UL UR UF UB DF DB (any flips) and the M-slice centers (turned in most cubes, also by CMLL algorithms with r/M). Solve with U and M only: EO, UL/UR, EP, then make sure the centers end solved
+1. feat-010 move explanations: key a dictionary on step ids (FB `orient`, `dl-edge`, `front|back-pair-free|join|insert`; SB `dr-edge`, `front|back-right-pair-free|join|insert`; CMLL `cmll-pre-auf`, `cmll`, `cmll-post-auf`; LSE `lse-eo`, `lse-ulur`, `lse-ep`) plus the `case` of CMLL/LSE steps, and replace the demo lesson on `/tutor` with `solveRoux` output
 2. Save tutoring sessions from `/tutor`: if signed in, call `startTutoringSession` when a solve loads, `saveTutoringProgress` on Next/Back (debounced), `completeTutoringSession` at the end
 3. Optional for the 3D view: a "reset view" button after orbiting, and swiping on the cube to turn layers (the PRD's "interactions on the cube trigger visual layer rotations"; not part of feat-004)
 
@@ -77,12 +83,21 @@
 - [ ] OpenCV.js bundle is ~10MB: must be lazy-loaded only on the scanner route
 - [ ] Supabase free plan pauses a project after a week without activity; the Leverage Workshop org now uses both free project slots (Gekko, roux-tutor)
 - [x] Human-style Roux solver (FB/SB) is the hardest part; no off-the-shelf library does it. Both blocks done (feat-006, feat-007)
-- [ ] After FB+SB the M-slice centers are usually turned (~75% of random cubes); CMLL handles this (recognizes from corners only), LSE must fix the centers
+- [x] After FB+SB the M-slice centers are usually turned (~75% of random cubes); CMLL recognizes from corners only, LSE fixes the centers (feat-009)
+- [ ] LSE phases are each optimal on their own, so a step can be long where a combined solve would be shorter (e.g. a 1-1 EO case takes 6 moves; UL/UR up to ~9). Accepted: the owner wants human-style phases. EOLR-style lookahead (choosing EO by UL/UR) is only used to break ties between equally short EO solutions
+- [ ] In `solveRoux` CMLL's `cmll-post-auf` turn is dropped when LSE does as well without it (see Decisions), so a `cmll-post-auf` step appears less often in full solves than in `solveCmll` alone
 - [ ] CMLL often starts on the layer SB ended on (13% of 1000 random cubes, e.g. SB's insert `... R'` then Sune's `R U R' ...`); a human would cancel those moves. Left as is: each case has one algorithm. If it bothers the owner, add mirrored/alternative algorithms per case and pick by the previous move
 - [ ] `fromFacelets` only checks format and that each corner/edge is a real piece. Full legality (each piece once, corner twist, edge flip, parity) is still to do in feat-005
 - [x] Fixed 2026-10-28: Claude's shell in the cloud container got Node 22 (`/opt/node22/bin` is on the default PATH and Claude's shell never reads `~/.bashrc`). `.claude/hooks/session-start.sh` (SessionStart hook, registered in `.claude/settings.json`) now writes `/opt/node24/bin` to the front of PATH via `$CLAUDE_ENV_FILE` and runs `npm install`. Takes effect for sessions that start from a branch containing the hook; no manual `export PATH` needed
 
 ## Decisions Made
+
+- **LSE in three human phases, each as short as possible** (feat-009): EO (all six edges good), UL/UR (white-orange and white-red between their own corners), EP (last four edges, centers, final top-layer turn). Distance tables over the full LSE space (6 edges x flips x 4 center turns x 4 top-layer turns = 184,320 states) give every phase's shortest length; ties go to the plan with the shortest later phases, then to no step starting on the layer the step before ended on, then to easier moves (`moveEffort`). A full-LSE optimal solve was not used: it mixes the phases, which is not how Roux is taught.
+- **Edge orientation is judged with the middle slice turned back**: an edge is bad when its white/yellow sticker doesn't face up/down; while the slice is a quarter turn off (white/yellow centers front/back), the four middle-slice edges count the other way round. With this rule M turns never change an edge's status and a quarter U turn only does while the slice is off. Checked: 5,760 of the 184,320 states have all edges good, and all of them connect to solved without ever making an edge bad.
+- **After EO no move makes an edge bad again**: UL/UR and EP only turn the top layer a quarter while the white/yellow centers are up/down, like a human (M turns and U2 otherwise).
+- **UL/UR may end with the top layer a half turn off** (both edges between their own corners, swapped in space): human 4b does this and 4c turns the layer back. Requiring the top layer lined up after UL/UR forced wasteful sequences like `U2 | U2 M U2 M'` (3,000 random LSE states: 11.6 -> 11.2 moves average, and same-layer starts between LSE steps went from 692 to 0).
+- **EP cases are named relative to the centers** (as if the middle slice were turned back so white is on top), and with the top layer turned back if it is a half turn off. The goal text says so. Neutral descriptive names (`3-cycle (yellow-blue in place)`, `front and back swapped`) instead of community 4c nicknames, which couldn't be checked offline.
+- **`solveRoux` leaves CMLL's final top-layer turn to LSE when that's not longer** (overrides "CMLL ends with the corners fully solved" for the full chain only; `solveCmll` / `solveThroughCmll` are unchanged). Humans don't turn the top layer after CMLL; LSE lines it up anyway. 1000 random cubes: 0.9 fewer moves on average, and LSE's first move hits the same layer as the move before it in ~1.4% of solves instead of ~25% (`U' | U2 M' U M'`). To restore the old behavior, drop the second candidate in `solveRoux`.
 
 - **CMLL is a table lookup over all 647 unsolved top-corner states** (feat-008): for every pre-AUF x algorithm x post-AUF (and the 3 post-AUF-only skips), undo it on a solved cube and keep the shortest option per state (ties: easiest moves, then post-AUF before pre-AUF). Recognition uses only the corners relative to the blocks (cubejs corner positions/twists), so a turned middle slice changes nothing. No search at solve time.
 - **CMLL ends with the corners fully solved relative to the blocks**: a final U turn is its own step (`cmll-post-auf`) instead of being left for LSE, so LSE starts from a fixed state and its U moves only align edges.
@@ -127,12 +142,16 @@
 
 ## Files Modified This Session
 
+- feat-009: `src/lib/solver/lse.ts`, `lse.test.ts`, `roux.ts`, `roux.test.ts` (new); `feature_list.json`, `progress.md`, `session-handoff.md`
 - feat-008: `src/lib/solver/cmllCases.ts`, `cmllCases.test.ts`, `cmll.ts`, `cmll.test.ts` (new); `feature_list.json`, `progress.md`, `session-handoff.md`
 - feat-007: `src/lib/solver/secondBlock.ts`, `secondBlock.test.ts` (new); `firstBlock.ts` (export `best`, generic `joinedPlacements`), `search.ts` (export `tableIndex`, `firstMove` option); `feature_list.json`, `progress.md`, `session-handoff.md`
 - feat-006 (earlier): `src/lib/solver/pieces.ts`, `search.ts`, `firstBlock.ts` and tests
 
 ## Evidence of Completion
 
+- [x] feat-009: `./init.sh` passes on Node 24: npm ci, typecheck, lint, 204/204 tests (22 new), build
+- [x] feat-009: every LSE state can finish every phase (table counts); all 5,760 oriented states and all 32 flip patterns x 180 sampled states solved, every phase checked move by move on the real cube (only U/M, edges good after EO and never bad again, UL/UR placed, cube solved); 3,000 random LSE states (11.2 moves average, max <= 20); 120 seeded scrambles with slice/wide turns through `solveRoux` end solved. Ad hoc benchmark, 1000 random-state cubes (`Cube.random`): full solve 48.1 moves average (FB 9.9, SB 15.1, CMLL 10.8, LSE 12.4), max 61; LSE max 18; phases: EO 5.2 moves (needed on 96%), UL/UR 5.4 (94%), EP 3.0 (76%); middle slice turned at LSE start on 77%. LSE tables ~30-50ms on first call, then median 0.05ms, max 1.2ms; full solve median 3ms (first ~280ms, FB tables)
+- Example (scramble `F U R' D R' L' D' R' U F D' U F D L' B D2 U D' F L U2 L' D R2`, 47 moves): ... CMLL `U'` / `R' U' R U' R' U2 R` (AS 1) / LSE `U M' U'` (EO, arrow) / `M U M2 U M' U2 M U` (UL/UR, both on top) / `M2` (EP, only the centers)
 - [x] feat-008: `./init.sh` passes on Node 24: npm ci, typecheck, lint, 182/182 tests (20 new), build
 - [x] feat-008: all 648 top-corner states solved with blocks intact (fewest moves the table allows, all 42 cases used); 120 seeded scrambles through FB + SB + CMLL. Ad hoc benchmark, 1000 random-state cubes (cubejs `Cube.random`) after FB + SB: CMLL 11.3 moves on average (algorithm 9.8, pre-AUF on 71%, post-AUF on 73%), max 17; 8 skips; first call ~40ms (builds the table), then median 0.02ms, max ~1ms
 - Example: CMLL `U2` (pre-AUF) / `F R' U2 R F' R' F U2 F' R` (S 4) / `U'` (post-AUF)
