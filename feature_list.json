@@ -21,8 +21,8 @@
       "name": "Mobile Viewport Layout",
       "description": "Top 60% canvas area, bottom 40% persistent Vaul drawer with notation, stage indicator, step counter, tutorial text, and large single-thumb Next / Back buttons",
       "dependencies": ["feat-001"],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "2026-10-28: /tutor route (src/app/tutor/page.tsx, src/components/tutor/). Top 60dvh: header + CubeNet (flat 2D net from the cube store, stand-in for feat-004's 3D canvas). Bottom 40dvh: fixed sheet (TutorDrawer) with Roux stage indicator, stage name, 'Move n of N' counter, next move in large notation plus the stage's move list, tutorial text (step.explanation, else the stage goal), and 64px Back / Next move buttons (56px on screens under 700px tall). Next/Back call the store's next/back. Content is DEMO_LESSON (src/lib/tutor/demoLesson.ts), a hand-written Roux solve whose scramble is its inverse; demoLesson.test.ts checks each stage completes its pieces (FB, SB, top corners, solved) and that SB uses only R r U M and LSE only U M. ./init.sh passed (typecheck, lint, 62/62 tests incl. 3 TutorScreen + 5 demo lesson + 1 store + 1 landing link, next build with /tutor static). Playwright on next start: sheet top at exactly 60% at 390x844 and 375x667, no horizontal or page scroll, light and dark; all stages' text fits without scrolling at 375x667 and 390x844 (scrolls inside the sheet at 320x568, buttons stay visible); no console errors. Landing page links to /tutor."
     },
     {
       "id": "feat-004",

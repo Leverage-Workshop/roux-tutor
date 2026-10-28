@@ -2,8 +2,8 @@
 
 ## Current State
 
-**Last Updated:** 2026-10-27
-**Active Feature:** feat-012 - Google Sign-In and Tutoring Sessions (done)
+**Last Updated:** 2026-10-28
+**Active Feature:** feat-003 - Mobile Viewport Layout (done)
 
 ## Status
 
@@ -29,15 +29,24 @@
   - `tutoringSessions.ts` helpers for the tutor screen to save sessions; types in `src/types/database.ts`
   - Supabase URL + publishable key set in Vercel and in `.env.example`
 
+- [x] SessionStart hook (`.claude/hooks/session-start.sh`, `.claude/settings.json`): cloud sessions get Node 24 on PATH and run `npm install`
+- [x] feat-003 mobile viewport layout at `/tutor` (linked from `/`)
+  - `src/app/tutor/page.tsx`: metadata, `viewportFit: "cover"` for the safe-area padding, renders `<TutorScreen lesson={DEMO_LESSON} />`
+  - `src/components/tutor/TutorScreen.tsx`: `<CubeStoreProvider>` seeded with the lesson; top 60dvh = header (home link, `AuthButton`) + `CubeNet`; bottom = `TutorDrawer`
+  - `CubeNet.tsx`: flat 2D net of the store's facelets. feat-004 replaces it with the R3F canvas in the same slot
+  - `TutorDrawer.tsx`: fixed 40dvh sheet with stage indicator, stage name, move counter, next move in large type, the stage's move list, tutorial text, Back / Next move buttons
+  - `src/lib/tutor/lesson.ts`: `ROUX_STAGES`, `TutorStep { move, stage, explanation? }`, `Lesson`, `createLesson`. Tutorial text is `step.explanation`, falling back to the stage goal (feat-010 fills explanations)
+  - `src/lib/tutor/demoLesson.ts`: demo Roux solve (32 moves); test proves each stage completes
+  - `createCubeStore(initial, moves)` and `<CubeStoreProvider moves>` load a move list up front, so the first render already shows the lesson
+
 ### What's In Progress
 
-- Nothing. feat-012 reaches production when its branch merges to `main`
+- Nothing
 
 ### What's Next
 
-1. feat-003 Mobile Viewport Layout (wrap the page in `<CubeStoreProvider>`; Next/Back call the store's `next`/`back`). Keep `<AuthButton />` in the layout
-2. When the tutor screen exists: if signed in, call `startTutoringSession` when a solve loads, `saveTutoringProgress` on Next/Back (debounced), `completeTutoringSession` at the end
-3. Then feat-004 3D Cube Renderer, feat-005 Manual Facelet Entry, or feat-006 First Block solver (all unblocked by feat-002)
+1. Save tutoring sessions from `/tutor`: if signed in, call `startTutoringSession` when a solve loads, `saveTutoringProgress` on Next/Back (debounced), `completeTutoringSession` at the end
+2. feat-004 3D Cube Renderer (swap `CubeNet` for the canvas in `TutorScreen`; animate from the store's `lastTurn`), feat-005 Manual Facelet Entry, or feat-006 First Block solver
 
 ## Blockers / Risks
 
@@ -48,6 +57,10 @@
 - [x] Fixed 2026-10-28: Claude's shell in the cloud container got Node 22 (`/opt/node22/bin` is on the default PATH and Claude's shell never reads `~/.bashrc`). `.claude/hooks/session-start.sh` (SessionStart hook, registered in `.claude/settings.json`) now writes `/opt/node24/bin` to the front of PATH via `$CLAUDE_ENV_FILE` and runs `npm install`. Takes effect for sessions that start from a branch containing the hook; no manual `export PATH` needed
 
 ## Decisions Made
+
+- **Tutor's bottom sheet is a plain `<section>`, not Vaul** (2026-10-28): Vaul 1.1.2 (latest; no release since Dec 2024) does not pass `modal={false}` to its Radix dialog, so the "non-modal" drawer still set `aria-hidden` on the cube view and header and trapped keyboard focus. The sheet never opens, closes or drags, so Vaul added nothing. Vaul stays installed for future sheets that do open and close.
+- **Tutor lives at `/tutor`**; `/` stays the landing page with a "Try a demo solve" link. The scanner (feat-011) will hand its result to the tutor later.
+- **Demo lesson until the solver exists**: scramble = inverse of a hand-written Roux solve. Its scramble contains M and r, which is fine because only the resulting state is used; net slice turns are zero, so centers start in the standard orientation.
 
 - **Vaul over Ant Design Mobile**: PRD allows either. Vaul is smaller, built for touch drawers, and works with Tailwind without a second design system.
 - **cubejs kept as the cube model**: supports M, r, and rotations, which Roux needs. Its `package.json` wrongly lists the whole `npm@6` CLI as a dependency (source of 42 audit warnings); an `overrides` entry in `package.json` swaps it for an empty package. Audit is now clean.
@@ -67,13 +80,12 @@
 
 ## Files Modified This Session
 
-- `supabase/migrations/*`, `src/lib/supabase/*`, `src/proxy.ts`, `src/app/auth/*`, `src/components/AuthButton*`, `src/types/database.ts` (new); `src/app/page.tsx`, `src/app/page.test.tsx`, `.env.example`, `AGENTS.md`, `docs/AUTH.md`, `feature_list.json`, `progress.md`, `session-handoff.md`
+- `.claude/hooks/session-start.sh`, `.claude/settings.json`, `src/app/tutor/*`, `src/components/tutor/*`, `src/lib/tutor/*` (new); `src/lib/cube/store.ts`, `src/lib/cube/CubeStoreProvider.tsx`, `src/lib/cube/store.test.ts`, `src/app/page.tsx`, `src/app/page.test.tsx`, `AGENTS.md`, `feature_list.json`, `progress.md`, `session-handoff.md`
 
 ## Evidence of Completion
 
-- [x] `./init.sh` passes on Node 24: npm ci, typecheck, lint, 52/52 tests, build (also builds with no env vars)
-- [x] RLS checked live; Vercel env vars set; callback/error routes checked with `next start`; 390px screenshots light/dark
-- [x] `npm audit`: 0 vulnerabilities
+- [x] `./init.sh` passes on Node 24: npm ci, typecheck, lint, 62/62 tests, build (`/tutor` static)
+- [x] Playwright against `next start`: sheet starts at exactly 60% height at 390x844 and 375x667, light and dark, no horizontal scroll, no console errors; stepping through every stage to "Solved" works
 
 ## Notes for Next Session
 

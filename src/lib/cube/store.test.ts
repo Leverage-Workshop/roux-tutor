@@ -13,6 +13,14 @@ describe("cube store", () => {
     expect(s.lastTurn).toBeNull();
   });
 
+  it("can start with a move list loaded and none applied", () => {
+    const start = applyMoves(solvedState(), "R U");
+    const s = createCubeStore(start, "U' R'").getState();
+    expect(s.moves).toEqual(["U'", "R'"]);
+    expect(s.stepIndex).toBe(0);
+    expect(s.facelets).toBe(after("R U"));
+  });
+
   it("steps through a loaded sequence with next and back", () => {
     const store = createCubeStore();
     store.getState().scramble("R U");

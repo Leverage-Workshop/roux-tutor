@@ -2,29 +2,24 @@
 
 ## Current Objective
 
-- Goal: Google Sign-In and Tutoring Sessions (feat-012)
-- Current status: Done. Owner signed in with Google on the branch preview
+- Goal: Mobile Viewport Layout (feat-003)
+- Current status: Done. Demo tutor at `/tutor`
 - Branch / commit: see `git log --oneline -1`
 
 ## Completed This Session
 
-- [x] Supabase project `roux-tutor` created; `tutoring_sessions` table with owner-only RLS
-- [x] Supabase clients (`src/lib/supabase/`), `src/proxy.ts`, `/auth/callback`, `/auth/error`
-- [x] `AuthButton` on `/` (optional Google sign-in / sign-out)
-- [x] `tutoringSessions.ts` read/write helpers for the future tutor screen
-- [x] Vercel env vars `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-- [x] feat-012 reshaped; saved scrambles and stats moved to feat-015
+- [x] SessionStart hook so cloud sessions use Node 24 without a manual PATH export
+- [x] `/tutor`: 60% cube view (2D net placeholder) + 40% fixed sheet with stages, counter, notation, text, Back / Next
+- [x] Demo Roux lesson with a test that each stage completes
+- [x] Store can start with a move list loaded
 
 ## Verification Evidence
 
 | Check | Command | Result | Notes |
 |---|---|---|---|
-| Typecheck | `npm run typecheck` | Pass | |
-| Lint | `npm run lint` | Pass | |
-| Tests | `npm test` | 52/52 pass | 10 new (redirect, sessions, AuthButton) |
-| Build | `npm run build` | Pass | With and without env vars; `/` static |
-| RLS | SQL in rolled-back transaction | Pass | Other users' rows hidden, anon blocked |
-| Routes | `next start` + curl | Pass | Bad/missing code -> `/auth/error`; `//evil.com` next ignored |
+| Full harness | `./init.sh` | Pass | 62/62 tests, `/tutor` static |
+| Layout | Playwright + `next start` | Pass | 60/40 split at 390x844 and 375x667, light/dark, no horizontal scroll |
+| Stepping | Playwright | Pass | All stages to "Solved", text fits at 375x667 |
 
 ## Files Changed
 
@@ -32,11 +27,11 @@
 
 ## Decisions Made
 
-- See "Decisions Made" in `progress.md`
+- See "Decisions Made" in `progress.md` (plain section instead of Vaul; `/tutor` route; demo lesson)
 
 ## Blockers / Risks
 
-- Node 24 in cloud sessions is handled by the SessionStart hook (`.claude/hooks/session-start.sh`)
+- None new
 
 ## Next Session Startup
 
@@ -48,5 +43,4 @@
 
 ## Recommended Next Step
 
-- Merge the feat-012 branch, then check sign-in on https://rouxtutor.leverageworkshop.com
-- Then start feat-003 Mobile Viewport Layout
+- Save tutoring sessions from `/tutor` for signed-in users, or feat-004 3D Cube Renderer (replace `CubeNet` in `TutorScreen`)
