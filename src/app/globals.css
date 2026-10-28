@@ -24,3 +24,24 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+/* A scroll area that shows a soft shadow at an edge while more content is
+   hidden past it. Pure CSS: the covers (local) scroll with the content and
+   hide the shadows (scroll) once an edge is reached. --scroll-bg must match
+   the background behind the area. */
+.scroll-shadows {
+  --scroll-bg: #ffffff;
+  --scroll-shadow: rgb(0 0 0 / 0.14);
+  background:
+    linear-gradient(var(--scroll-bg) 50%, transparent) center top / 100% 20px no-repeat local,
+    linear-gradient(transparent, var(--scroll-bg) 50%) center bottom / 100% 20px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, var(--scroll-shadow), transparent) center top / 100% 8px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, var(--scroll-shadow), transparent) center bottom / 100% 8px no-repeat scroll;
+}
+
+@media (prefers-color-scheme: dark) {
+  .scroll-shadows {
+    --scroll-bg: var(--color-zinc-900);
+    --scroll-shadow: rgb(255 255 255 / 0.12);
+  }
+}

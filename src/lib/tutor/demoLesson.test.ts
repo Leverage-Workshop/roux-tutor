@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { applyMoves, faceletPosition, isSolved, solvedState, toFacelets, type Face } from "@/lib/cube/model";
-import { DEMO_LESSON } from "./demoLesson";
+import { parseAlgorithm } from "@/lib/cube/notation";
+import { solveRoux } from "@/lib/solver/roux";
+import { DEMO_SCRAMBLE, demoLesson } from "./demoLesson";
 import { ROUX_STAGES, type RouxStageId } from "./lesson";
+
+const DEMO_LESSON = demoLesson();
 
 type Where = (face: Face, row: number, col: number) => boolean;
 
@@ -28,10 +32,11 @@ function solvedAt(facelets: string, where: Where): boolean {
   });
 }
 
-function stateAfter(stage: RouxStageId | null) {
+/** Facelets after the given stage (then `extra` moves, e.g. a top-layer turn). */
+function stateAfter(stage: RouxStageId | null, extra = "") {
   const last = stage ? DEMO_LESSON.steps.findLastIndex((s) => s.stage === stage) : -1;
   const moves = DEMO_LESSON.steps.slice(0, last + 1).map((s) => s.move);
-  return toFacelets(applyMoves(applyMoves(solvedState(), DEMO_LESSON.scramble), moves));
+  return toFacelets(applyMoves(applyMoves(applyMoves(solvedState(), DEMO_LESSON.scramble), moves), extra));
 }
 
 describe("facelet groups", () => {
@@ -73,10 +78,36 @@ describe("demo lesson", () => {
 
     const cmll = stateAfter("cmll");
     expect(solvedAt(cmll, FIRST_BLOCK) && solvedAt(cmll, SECOND_BLOCK)).toBe(true);
-    expect(solvedAt(cmll, TOP_CORNERS)).toBe(true);
+    // The solve may leave CMLL's last top-layer turn to LSE: corners solved, maybe turned.
+    expect(["", "U", "U2", "U'"].some((auf) => solvedAt(stateAfter("cmll", auf), TOP_CORNERS))).toBe(true);
     expect(solvedAt(cmll, EVERYTHING)).toBe(false);
 
     expect(isSolved(applyMoves(applyMoves(solvedState(), DEMO_LESSON.scramble), DEMO_LESSON.steps.map((s) => s.move)))).toBe(true);
+  });
+
+  it("is the Roux solver's solve of the demo scramble, with every move explained", () => {
+    expect(DEMO_LESSON.scramble).toEqual(parseAlgorithm(DEMO_SCRAMBLE));
+    const solution = solveRoux(applyMoves(solvedState(), DEMO_SCRAMBLE));
+    expect(DEMO_LESSON.steps.map((s) => s.move)).toEqual(solution.moves);
+    expect(DEMO_LESSON.phases?.map((p) => p.id)).toEqual(solution.stages.flatMap((s) => s.steps.map((step) => step.id)));
+    for (const step of DEMO_LESSON.steps) {
+      const phase = DEMO_LESSON.phases![step.phase!];
+      expect(phase.stage).toBe(step.stage);
+      expect(phase.name.length > 0 && phase.goal.length > 0).toBe(true);
+      expect(step.explanation?.startsWith(step.move)).toBe(true);
+    }
+    // Phases are consecutive runs of moves, in order.
+    const order = DEMO_LESSON.steps.map((s) => s.phase!);
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+    expect(new Set(order).size).toBe(DEMO_LESSON.phases!.length);
+  });
+
+  it("shows most kinds of step: pairs freed, joined and inserted, a CMLL case with a pre-turn, and all three LSE steps", () => {
+    const ids = new Set(DEMO_LESSON.phases!.map((p) => p.id));
+    for (const id of ["dl-edge", "back-pair-free", "front-pair-join", "front-pair-insert", "dr-edge", "front-right-pair-free"]) {
+      expect(ids.has(id), id).toBe(true);
+    }
+    for (const id of ["cmll-pre-auf", "cmll", "lse-eo", "lse-ulur", "lse-ep"]) expect(ids.has(id), id).toBe(true);
   });
 
   it("builds the second block with only R, r, U and M, and LSE with only U and M", () => {

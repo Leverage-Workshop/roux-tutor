@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { TutorScreen } from "@/components/tutor/TutorScreen";
-import { DEMO_LESSON } from "@/lib/tutor/demoLesson";
+import { demoLesson } from "@/lib/tutor/demoLesson";
 
 export const metadata: Metadata = {
   title: "Tutor · Roux Tutor",
@@ -12,6 +12,9 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+// A Server Component: the demo solve (and its explanations) is worked out
+// while the page is prerendered at build time, and only the finished lesson
+// is sent to the browser.
 export default function TutorPage() {
-  return <TutorScreen lesson={DEMO_LESSON} />;
+  return <TutorScreen lesson={demoLesson()} />;
 }

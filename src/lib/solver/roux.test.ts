@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { applyMoves, isSolved, solvedState, type CubeState } from "@/lib/cube/model";
 import { formatAlgorithm, parseAlgorithm, type Move } from "@/lib/cube/notation";
-import { DEMO_LESSON } from "@/lib/tutor/demoLesson";
+import { DEMO_SCRAMBLE } from "@/lib/tutor/demoLesson";
 import { createLesson } from "@/lib/tutor/lesson";
 import { isCmllSolved, solveThroughCmll } from "./cmll";
 import { isFirstBlockSolved } from "./firstBlock";
@@ -86,7 +86,7 @@ describe("solveRoux", () => {
   }, 30_000);
 
   it("solves the demo lesson's scramble", () => {
-    const start = scrambled(DEMO_LESSON.scramble);
+    const start = scrambled(DEMO_SCRAMBLE);
     expect(isLseSolved(applyMoves(start, solveRoux(start).moves))).toBe(true);
   });
 
