@@ -3,7 +3,7 @@
     {
       "id": "feat-001",
       "name": "Project Setup",
-      "description": "Next.js + TypeScript + Tailwind app with the PRD tech stack installed (zustand, three, R3F, drei, vaul, opencv-js, cubejs, supabase) and a passing ./init.sh",
+      "description": "Next.js + TypeScript + Tailwind app with the PRD tech stack installed (zustand, three, R3F, drei, vaul [replaced by Base UI 2026-10-28], opencv-js, cubejs, supabase) and a passing ./init.sh",
       "dependencies": [],
       "status": "done",
       "evidence": "2026-10-26: ./init.sh passed (npm ci, typecheck, lint, 3/3 vitest smoke tests in src/lib/stack.smoke.test.ts, next build). npm audit: 0 vulnerabilities."
@@ -19,10 +19,10 @@
     {
       "id": "feat-003",
       "name": "Mobile Viewport Layout",
-      "description": "Top 60% canvas area, bottom 40% persistent Vaul drawer with notation, stage indicator, step counter, tutorial text, and large single-thumb Next / Back buttons",
+      "description": "Top 60% canvas area, bottom 40% persistent drawer (Base UI) with notation, stage indicator, step counter, tutorial text, and large single-thumb Next / Back buttons",
       "dependencies": ["feat-001"],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "2026-10-28: /tutor route (src/app/tutor/page.tsx, src/components/tutor/). Top 60dvh: header + CubeNet (flat 2D net from the cube store, stand-in for feat-004's 3D canvas). Bottom 40dvh: always-open, non-modal Base UI drawer (TutorDrawer, no swipe Viewport) with Roux stage indicator, stage name, 'Move n of N' counter, next move in large notation plus the stage's move list, tutorial text (step.explanation, else the stage goal), and 64px Back / Next move buttons (56px on screens under 700px tall). Next/Back call the store's next/back. Content is DEMO_LESSON (src/lib/tutor/demoLesson.ts), a hand-written Roux solve whose scramble is its inverse; demoLesson.test.ts checks each stage completes its pieces (FB, SB, top corners, solved) and that SB uses only R r U M and LSE only U M. ./init.sh passed (typecheck, lint, 63/63 tests incl. 4 TutorScreen + 5 demo lesson + 1 store + 1 landing link, next build with /tutor static). Playwright on next start: sheet top at exactly 60% at 390x844 and 375x667, no horizontal or page scroll, light and dark; all stages' text fits without scrolling at 375x667 and 390x844 (scrolls inside the sheet at 320x568, buttons stay visible); no console errors. Landing page links to /tutor. Drawer checks (Playwright): cube view not aria-hidden, aria-modal absent, Tab moves between header and sheet, Escape/outside tap/drag leave it open at 60%; server HTML includes an empty sheet outline so the bottom 40% isn't blank before JS. Vaul replaced by @base-ui/react 1.9.0 (Vaul unmaintained and ignored modal={false})."
     },
     {
       "id": "feat-004",

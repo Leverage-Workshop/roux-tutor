@@ -2,29 +2,26 @@
 
 ## Current Objective
 
-- Goal: Google Sign-In and Tutoring Sessions (feat-012)
-- Current status: Done. Owner signed in with Google on the branch preview
+- Goal: Mobile Viewport Layout (feat-003)
+- Current status: Done. Demo tutor at `/tutor`
 - Branch / commit: see `git log --oneline -1`
 
 ## Completed This Session
 
-- [x] Supabase project `roux-tutor` created; `tutoring_sessions` table with owner-only RLS
-- [x] Supabase clients (`src/lib/supabase/`), `src/proxy.ts`, `/auth/callback`, `/auth/error`
-- [x] `AuthButton` on `/` (optional Google sign-in / sign-out)
-- [x] `tutoringSessions.ts` read/write helpers for the future tutor screen
-- [x] Vercel env vars `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-- [x] feat-012 reshaped; saved scrambles and stats moved to feat-015
+- [x] SessionStart hook so cloud sessions use Node 24 without a manual PATH export
+- [x] `/tutor`: 60% cube view (2D net placeholder) + 40% fixed sheet with stages, counter, notation, text, Back / Next
+- [x] Demo Roux lesson with a test that each stage completes
+- [x] Store can start with a move list loaded
+- [x] Replaced unmaintained Vaul with Base UI; the tutor sheet is a non-modal Base UI drawer
 
 ## Verification Evidence
 
 | Check | Command | Result | Notes |
 |---|---|---|---|
-| Typecheck | `npm run typecheck` | Pass | |
-| Lint | `npm run lint` | Pass | |
-| Tests | `npm test` | 52/52 pass | 10 new (redirect, sessions, AuthButton) |
-| Build | `npm run build` | Pass | With and without env vars; `/` static |
-| RLS | SQL in rolled-back transaction | Pass | Other users' rows hidden, anon blocked |
-| Routes | `next start` + curl | Pass | Bad/missing code -> `/auth/error`; `//evil.com` next ignored |
+| Full harness | `./init.sh` | Pass | 63/63 tests, `/tutor` static |
+| Drawer a11y | Playwright | Pass | Cube view not hidden, no focus trap, Escape/tap/drag keep it open |
+| Layout | Playwright + `next start` | Pass | 60/40 split at 390x844 and 375x667, light/dark, no horizontal scroll |
+| Stepping | Playwright | Pass | All stages to "Solved", text fits at 375x667 |
 
 ## Files Changed
 
@@ -32,21 +29,20 @@
 
 ## Decisions Made
 
-- See "Decisions Made" in `progress.md`
+- See "Decisions Made" in `progress.md` (Base UI replaced Vaul; `/tutor` route; demo lesson)
 
 ## Blockers / Risks
 
-- Claude's shell gets Node 22, not 24: see Blockers in `progress.md`
+- None new
 
 ## Next Session Startup
 
 1. Read `AGENTS.md` (`CLAUDE.md` imports it).
 2. Read `feature_list.json` and `progress.md`.
 3. Review this handoff.
-4. Run `export PATH=/opt/node24/bin:$PATH` then `./init.sh` before editing.
+4. Run `./init.sh` before editing (the SessionStart hook puts Node 24 on PATH).
 5. Run `git fetch origin` and check for unmerged feature branches before picking a feature.
 
 ## Recommended Next Step
 
-- Merge the feat-012 branch, then check sign-in on https://rouxtutor.leverageworkshop.com
-- Then start feat-003 Mobile Viewport Layout
+- Save tutoring sessions from `/tutor` for signed-in users, or feat-004 3D Cube Renderer (replace `CubeNet` in `TutorScreen`)

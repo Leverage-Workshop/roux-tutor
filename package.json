@@ -15,6 +15,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@base-ui/react": "^1.9.0",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
     "@supabase/ssr": "^0.12.7",
@@ -25,7 +26,6 @@
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "three": "^0.186.1",
-    "vaul": "^1.1.2",
     "zustand": "^5.0.16"
   },
   "devDependencies": {

@@ -1,4 +1,5 @@
 // Placeholder landing page until the scanner and tutor screens exist.
+import Link from "next/link";
 import { AuthButton } from "@/components/AuthButton";
 
 const FACE_COLORS = [
@@ -44,6 +45,12 @@ export default function Home() {
         <p className="mx-auto rounded-full bg-zinc-100 px-4 py-1 text-sm font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
           Coming soon
         </p>
+        <Link
+          href="/tutor"
+          className="mx-auto mt-2 flex min-h-12 items-center rounded-full bg-foreground px-6 font-semibold text-background"
+        >
+          Try a demo solve
+        </Link>
       </div>
 
       <ol className="flex w-full flex-col gap-3 text-left">

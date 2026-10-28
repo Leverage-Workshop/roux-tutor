@@ -1,10 +1,12 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import Home from "./page";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 describe("landing page", () => {
+  afterEach(cleanup);
+
   it("shows the app name and the four Roux stages", () => {
     render(<Home />);
     expect(
@@ -19,5 +21,11 @@ describe("landing page", () => {
       "CMLL",
       "Last Six Edges",
     ]);
+  });
+
+  it("links to the demo solve", () => {
+    render(<Home />);
+    const link = screen.getByRole("link", { name: "Try a demo solve" });
+    expect(link.getAttribute("href")).toBe("/tutor");
   });
 });

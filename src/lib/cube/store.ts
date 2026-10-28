@@ -58,9 +58,10 @@ function snapshot(initial: CubeState, moves: Move[], stepIndex: number): CubeSto
   return { initial, moves, stepIndex, cube, facelets: toFacelets(cube), lastTurn: null };
 }
 
-export function createCubeStore(initial: CubeState = solvedState()) {
+/** A store at `initial`, with `moves` loaded and none applied yet. */
+export function createCubeStore(initial: CubeState = solvedState(), moves: string | readonly Move[] = []) {
   return createStore<CubeStore>()((set, get) => ({
-    ...snapshot(initial, [], 0),
+    ...snapshot(initial, toMoves(moves), 0),
 
     setInitial: (state) => set(snapshot(state, [], 0)),
 

@@ -16,7 +16,7 @@ The core loop allows a user to photograph their physical scrambled cube, instant
 ### Frontend Core
 * **Framework:** Next.js (React)
 * **State Management:** Zustand (High-performance state engine optimized for synchronized rendering between 3D layers and HTML UI)
-* **Styling & UI Components:** Tailwind CSS combined with Ant Design Mobile (or Vaul for touch-native drawer sheets)
+* **Styling & UI Components:** Tailwind CSS combined with Base UI (its Drawer for touch-native bottom sheets). Vaul, the earlier choice, is no longer maintained
 
 ### 3D Graphics Engine
 * **Renderer:** React Three Fiber (R3F) wrapper for Three.js
