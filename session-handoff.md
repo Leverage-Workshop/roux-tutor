@@ -3,7 +3,7 @@
 ## Current Objective
 
 - Goal: Google Sign-In and Tutoring Sessions (feat-012)
-- Current status: Code, database and Vercel env vars done. Waiting on the owner's Google OAuth setup (`docs/AUTH.md`)
+- Current status: Done. Owner signed in with Google on the branch preview
 - Branch / commit: see `git log --oneline -1`
 
 ## Completed This Session
@@ -36,7 +36,6 @@
 
 ## Blockers / Risks
 
-- Google provider not enabled in Supabase yet (owner action, `docs/AUTH.md`)
 - Claude's shell gets Node 22, not 24: see Blockers in `progress.md`
 
 ## Next Session Startup
@@ -49,5 +48,5 @@
 
 ## Recommended Next Step
 
-- Once Google is set up: test sign-in on production and mark feat-012 done
+- Merge the feat-012 branch, then check sign-in on https://rouxtutor.leverageworkshop.com
 - Then start feat-003 Mobile Viewport Layout

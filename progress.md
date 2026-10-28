@@ -3,7 +3,7 @@
 ## Current State
 
 **Last Updated:** 2026-10-27
-**Active Feature:** feat-012 - Google Sign-In and Tutoring Sessions (code done; waiting on Google setup)
+**Active Feature:** feat-012 - Google Sign-In and Tutoring Sessions (done)
 
 ## Status
 
@@ -22,7 +22,7 @@
   - `model.ts`: pure functions over a plain `CubeState` (`applyMoves`, `toFacelets`, `fromFacelets`, `isSolved`, `faceletColors`, `faceColors`, `faceletPosition`), Western color scheme `FACE_COLOR` and shared `STICKER_HEX` palette. Facelet layout documented at the top of the file
   - `store.ts`: `createCubeStore` (zustand vanilla) with `initial`, `moves`, `stepIndex`, `cube`, `facelets`, `lastTurn`; actions `setInitial`, `scramble`, `loadMoves`, `applyMoves`, `next`, `back` (undo), `goTo`
   - `CubeStoreProvider.tsx`: per-provider store + `useCubeStore(selector)` hook (zustand's Next.js pattern)
-- [x] feat-012 (code and database; see `docs/AUTH.md`)
+- [x] feat-012 Google sign-in + tutoring sessions (see `docs/AUTH.md`). Sign-in tested by the owner on the branch preview 2026-10-28
   - Supabase project `roux-tutor` (ref `uhswyjnzypxpdomhlxdy`, us-east-1, free) with `tutoring_sessions` table + owner-only RLS (`supabase/migrations/`)
   - Supabase clients in `src/lib/supabase/` (browser, server, proxy), all null-safe without env vars; `src/proxy.ts` refreshes sessions
   - `AuthButton` (top right of `/`): "Sign in with Google" / name + "Sign out"; `/auth/callback` route, `/auth/error` page
@@ -31,7 +31,7 @@
 
 ### What's In Progress
 
-- feat-012: the project owner must create the Google OAuth client and enable Google in Supabase (steps in `docs/AUTH.md`), then sign-in gets tested on production and the feature is marked done
+- Nothing. feat-012 reaches production when its branch merges to `main`
 
 ### What's Next
 
@@ -42,7 +42,6 @@
 ## Blockers / Risks
 
 - [ ] OpenCV.js bundle is ~10MB: must be lazy-loaded only on the scanner route
-- [ ] Google sign-in is not enabled yet: Supabase returns "provider is not enabled" until the Google OAuth client is set up (`docs/AUTH.md`). Until then the button leads to an error from Supabase
 - [ ] Supabase free plan pauses a project after a week without activity; the Leverage Workshop org now uses both free project slots (Gekko, roux-tutor)
 - [ ] Human-style Roux solver (FB/SB) is the hardest part; no off-the-shelf library does it
 - [ ] `fromFacelets` only checks format and that each corner/edge is a real piece. Full legality (each piece once, corner twist, edge flip, parity) is still to do in feat-005
@@ -64,6 +63,7 @@
 - **feat-012 reshaped** (user's choice): now Google sign-in + tutoring sessions. Saved scrambles and stats moved to new feat-015.
 - **Auth UI is a Client Component** (`onAuthStateChange`), so `/` stays statically prerendered. RLS, not the UI, protects data.
 - **`tutoring_sessions.user_id` defaults to `auth.uid()`**: the client never sends a user id.
+- **Supabase "Allow new users to sign up" must stay on**: with it off, Google sign-in fails at the Supabase callback with 422 and the user lands on `/auth/error`.
 
 ## Files Modified This Session
 

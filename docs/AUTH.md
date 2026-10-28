@@ -28,22 +28,25 @@ Supabase clients: `src/lib/supabase/client.ts` (browser), `server.ts` (Server Co
 - Regenerate `src/types/database.ts` after every migration.
 - Read/write helpers: `src/lib/supabase/tutoringSessions.ts` (`startTutoringSession`, `saveTutoringProgress`, `completeTutoringSession`, `listTutoringSessions`).
 
-## One-time Google setup (manual)
+## One-time Google setup (done 2026-10-28)
 
-These steps need the project owner's Google Cloud and Supabase dashboard access.
+Already done for project roux-tutor. Repeat only for a new project or a new Google client.
 
-1. **Google Cloud Console** (console.cloud.google.com), in a project for Roux Tutor:
-   1. Google Auth Platform > Branding: app name "Roux Tutor", support email, home page `https://rouxtutor.leverageworkshop.com`, authorized domains `leverageworkshop.com` and `supabase.co`.
-   2. Audience: External. Publish the app (in "Testing" only listed test users can sign in).
-   3. Data Access: scopes `openid`, `.../auth/userinfo.email`, `.../auth/userinfo.profile`.
-   4. Clients > Create client > Web application:
-      - Authorized JavaScript origins: `https://rouxtutor.leverageworkshop.com`, `http://localhost:3000`
+1. **Google Cloud Console** (use "Desktop site" on a phone):
+   1. Create a project "Roux Tutor" and select it.
+   2. Google Auth Platform (`console.cloud.google.com/auth/overview`) > Get started: app name Roux Tutor, support email, Audience **External**, contact email, agree, Create. No authorized domains or extra scopes needed: Supabase only asks for `email` and `profile`.
+   3. Clients (`/auth/clients`) > Create client > **Web application**:
+      - Authorized JavaScript origins: `https://rouxtutor.leverageworkshop.com`
       - Authorized redirect URI: `https://uhswyjnzypxpdomhlxdy.supabase.co/auth/v1/callback`
-   5. Copy the Client ID and Client secret.
+      - Copy the Client ID and secret right away (the secret may not be shown again).
+   4. Audience (`/auth/audience`) > **Publish app**. In "Testing" only listed test users can sign in.
 2. **Supabase dashboard** (project roux-tutor):
-   1. Authentication > Sign In / Providers > Google: enable, paste Client ID and secret, save.
-   2. Authentication > URL Configuration:
+   1. Authentication > Sign In / Providers: under User Signups, **Allow new users to sign up** must be on (otherwise the callback fails with "422: Signups not allowed for this instance").
+   2. Same page > Google: enable, paste Client ID and secret, save.
+   3. Authentication > URL Configuration:
       - Site URL: `https://rouxtutor.leverageworkshop.com`
       - Redirect URLs: `https://rouxtutor.leverageworkshop.com/auth/callback`, `http://localhost:3000/auth/callback`, `https://*-leverage-workshop-s-projects.vercel.app/**` (Vercel previews)
 
-Check: `curl "https://uhswyjnzypxpdomhlxdy.supabase.co/auth/v1/authorize?provider=google"` should redirect (302) to Google instead of returning "provider is not enabled".
+Checks:
+- `curl -I "https://uhswyjnzypxpdomhlxdy.supabase.co/auth/v1/authorize?provider=google"` should return 302 to `accounts.google.com`.
+- If sign-in lands on `/auth/error`, read the Supabase auth logs (Supabase MCP `query_logs`, `source = 'auth_logs'`) for the reason.
