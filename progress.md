@@ -3,7 +3,7 @@
 ## Current State
 
 **Last Updated:** 2026-10-28
-**Active Feature:** feat-006 - Roux Solver: First Block (done)
+**Active Feature:** feat-007 - Roux Solver: Second Block (done)
 
 ## Status
 
@@ -52,25 +52,36 @@
   - `firstBlock.ts`: `solveFirstBlock(state)` -> `{ moves, steps }`. Steps (only those with moves): `orient`, `dl-edge`, then per pair `front|back-pair-free`, `-join`, `-insert`, each with `name`, `goal`, `moves`. Also `isFirstBlockSolved`, `orientationMoves`, `moveEffort`
   - Not used by `/tutor` yet; the demo lesson stays hand-written until the other stages exist
 
+- [x] feat-007 Second Block solver in `src/lib/solver/secondBlock.ts`
+  - `solveSecondBlock(state)` -> `{ moves, steps }` for a cube whose first block is solved (throws otherwise). Only R, r, U, M. Steps (only those with moves): `dr-edge`, then per pair `front|back-right-pair-free`, `-join`, `-insert`, each with `name`, `goal`, `moves`
+  - `isSecondBlockSolved(state)` (red center + DR, FR, BR edges + DFR, DRB corners home; M centers may be off), `solveBlocks(state)` -> `{ moves, firstBlock, secondBlock }`
+  - Small shared changes: `firstBlock.ts` exports `best` and `joinedPlacements(corner, edge)`; `search.ts` exports `tableIndex` and takes a `firstMove` filter option
+
 ### What's In Progress
 
 - Nothing
 
 ### What's Next
 
-1. feat-007 Second Block solver: reuse `search.ts` with layers R, r, U, M and a goal of the FB pieces plus the right block
+1. feat-008 CMLL: after `solveBlocks`, recognize the top-corner case (U adjust + case lookup) and apply the CMLL algorithm. Algorithms may use any moves (R, U, F, ...) as long as both blocks end solved; M centers stay as SB left them
 2. Save tutoring sessions from `/tutor`: if signed in, call `startTutoringSession` when a solve loads, `saveTutoringProgress` on Next/Back (debounced), `completeTutoringSession` at the end
-3. Optional for the 3D view: a "reset view" button after orbiting, and swiping on the cube to turn layers (the PRD's "interactions on the cube trigger visual layer rotations"; not part of feat-004)
+3. feat-009 LSE: must fix the M-slice centers too (after FB+SB they are off in ~75% of random cubes)
+4. Optional for the 3D view: a "reset view" button after orbiting, and swiping on the cube to turn layers (the PRD's "interactions on the cube trigger visual layer rotations"; not part of feat-004)
 
 ## Blockers / Risks
 
 - [ ] OpenCV.js bundle is ~10MB: must be lazy-loaded only on the scanner route
 - [ ] Supabase free plan pauses a project after a week without activity; the Leverage Workshop org now uses both free project slots (Gekko, roux-tutor)
-- [ ] Human-style Roux solver (FB/SB) is the hardest part; no off-the-shelf library does it
+- [x] Human-style Roux solver (FB/SB) is the hardest part; no off-the-shelf library does it. Both blocks done (feat-006, feat-007)
+- [ ] After FB+SB the M-slice centers are usually turned (~75% of random cubes); CMLL must not assume a white U center and LSE must fix the centers
 - [ ] `fromFacelets` only checks format and that each corner/edge is a real piece. Full legality (each piece once, corner twist, edge flip, parity) is still to do in feat-005
 - [x] Fixed 2026-10-28: Claude's shell in the cloud container got Node 22 (`/opt/node22/bin` is on the default PATH and Claude's shell never reads `~/.bashrc`). `.claude/hooks/session-start.sh` (SessionStart hook, registered in `.claude/settings.json`) now writes `/opt/node24/bin` to the front of PATH via `$CLAUDE_ENV_FILE` and runs `npm install`. Takes effect for sessions that start from a branch containing the hook; no manual `export PATH` needed
 
 ## Decisions Made
+
+- **Second block is built Roux style** (feat-007), mirroring FB: the yellow-red bottom-right edge first, then each right pair in three phases: free (only if the corner sits in a bottom-right slot or the edge in FR/BR), join (corner and edge joined in the top layer, at a spot the pair can be inserted from), insert (the pair stays joined on every move). Every phase uses R, r, U and M only, so the first block can't break; the DR edge and a finished pair may move during a phase (as in R U R') but are home at the end of each phase. Costs ~1.7 moves over a plain per-piece shortest search (15.0 vs 13.3 average).
+- **SB leaves the M-slice centers alone**: both blocks are judged against the L/R centers and the first block's yellow bottom, as in Roux. `isSecondBlockSolved` ignores the U/F/D/B centers. LSE fixes them. When they're off, the DR-edge step's goal text says so ("match the bottom to the left block's yellow, not to the centers").
+- **No step starts on the layer the previous step ended on** (SB): stops "R2 | R' U R" (looks like undoing). Only the same layer letter is blocked; "M | r U R'" (join with M, insert with r) is allowed since blocking it forced 6-move detours. Joins chosen by shortest join, not join+insert: a join lookahead over insert lengths gave no gain (15.01 vs 15.00) at 4x the time.
 
 - **First block is built Roux style** (feat-006, revised after owner review): the yellow-orange edge first, then each corner-edge pair in three phases: free (only if a piece is stuck on the left side), join (U, R, r, M only, so the left side is never touched), insert (face turns, the pair stays joined every move). The first version just searched the shortest way to get each pair home, which gave moves like `F U' R2 F` that never form a pair. Roux style costs ~0.7 moves (9.9 vs 9.2 average).
 - **Slice and wide turns only while joining**: freeing, inserting and the DL edge use face turns. Joining with M and r can leave the U/F/D/B centers turned; that's normal in Roux and LSE fixes them.
@@ -105,10 +116,14 @@
 
 ## Files Modified This Session
 
-- `src/lib/solver/pieces.ts`, `search.ts`, `firstBlock.ts` and tests (new); `feature_list.json`, `progress.md`, `session-handoff.md`
+- feat-007: `src/lib/solver/secondBlock.ts`, `secondBlock.test.ts` (new); `firstBlock.ts` (export `best`, generic `joinedPlacements`), `search.ts` (export `tableIndex`, `firstMove` option); `feature_list.json`, `progress.md`, `session-handoff.md`
+- feat-006 (earlier): `src/lib/solver/pieces.ts`, `search.ts`, `firstBlock.ts` and tests
 
 ## Evidence of Completion
 
+- [x] feat-007: `./init.sh` passes on Node 24: npm ci, typecheck, lint, 162/162 tests (13 new), build
+- [x] feat-007: 120 seeded scrambles check every SB move and phase; ad hoc benchmark, 400 random cubes after FB: SB 15.0 moves average, max 21; first SB solve ~60ms (tables), then median 1.6ms, max 12ms. 2000 random-state cubes (cubejs `Cube.random`): all solved, average 15.0, max 23. Phase averages: DR edge 2.9 (needed on 96% of cubes), free 3.0 (25% of pairs), join 2.5 (80%), insert 3.4. FB unchanged (~170ms first, 0.5ms median)
+- Example (scramble `F U R' D R' L' D' R' U F D' U F D L' B D2 U D' F L U2 L' D R2`, FB `B L' F' U' R U' B2 U r' U' R' F`): SB `R2` (DR edge) / `M U' M2` (back pair join) / `R' U R` (insert) / `r U R'` (front pair free) / `U' M2` (join) / `r U R'` (insert)
 - [x] `./init.sh` passes on Node 24: npm ci, typecheck, lint, 149/149 tests, build
 - [x] 100 seeded random scrambles: every free/join/insert phase checked; 300 random cubes: ~9.9 moves average, max 15, median 0.6ms
 
