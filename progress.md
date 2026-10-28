@@ -48,8 +48,8 @@
 
 - [x] feat-006 First Block solver in `src/lib/solver/`
   - `pieces.ts`: follows single pieces as 0-23 numbers (position + orientation); move tables read from cubejs
-  - `search.ts`: `buildMoveSet`, `distanceTable` (BFS, up to 4 pieces, cached), `shortestSolutions` (IDA*, returns every shortest solution up to a cap), `applyAlgorithm`
-  - `firstBlock.ts`: `solveFirstBlock(state)` -> `{ moves, steps }`, steps `orient` (only if needed), `dl-edge`, `front-pair`, `back-pair`, each with `name`, `goal`, `moves`; also `isFirstBlockSolved`, `orientationMoves`, `moveEffort`
+  - `search.ts`: `buildMoveSet`, `distanceTable` (multi-goal BFS, up to 4 pieces, cached), `shortestSolutions` (IDA*; a step has a `goal` rule, an optional `keep` rule every move must satisfy, and lower `bounds`), `applyAlgorithm`
+  - `firstBlock.ts`: `solveFirstBlock(state)` -> `{ moves, steps }`. Steps (only those with moves): `orient`, `dl-edge`, then per pair `front|back-pair-free`, `-join`, `-insert`, each with `name`, `goal`, `moves`. Also `isFirstBlockSolved`, `orientationMoves`, `moveEffort`
   - Not used by `/tutor` yet; the demo lesson stays hand-written until the other stages exist
 
 ### What's In Progress
@@ -72,11 +72,11 @@
 
 ## Decisions Made
 
-- **First block is taught as line + two pairs** (feat-006): the yellow-orange edge first, then each corner-edge pair, every step as short as possible. About 9 moves on average, vs ~7 for an expert-style whole-block solve (the demo's hand-written FB is 6, the solver's is 9). Easier to follow and to explain move by move (feat-010).
-- **FB uses face turns only** (U D F B L R): adding M and r saved ~1 move (8.3 vs 9.3 average) but moved the yellow center off the bottom mid-block. One constant (`FB_LAYERS`) to change if wanted.
+- **First block is built Roux style** (feat-006, revised after owner review): the yellow-orange edge first, then each corner-edge pair in three phases: free (only if a piece is stuck on the left side), join (U, R, r, M only, so the left side is never touched), insert (face turns, the pair stays joined every move). The first version just searched the shortest way to get each pair home, which gave moves like `F U' R2 F` that never form a pair. Roux style costs ~0.7 moves (9.9 vs 9.2 average).
+- **Slice and wide turns only while joining**: freeing, inserting and the DL edge use face turns. Joining with M and r can leave the U/F/D/B centers turned; that's normal in Roux and LSE fixes them.
 - **Solves start from standard centers**: if orange isn't left or yellow isn't down, the first step is a whole-cube rotation. A cube with a turned middle slice also gets one, even if its block is already built; face-turn scrambles never do.
 - **Ties between equally short solves** go to the easier moves: R, U cheapest, then r, M, L, F, D, B hardest; half turns slightly more (`moveEffort`).
-- **No 4-piece lookup table for the last pair**: it cut search time a little but took ~0.6s to build on the first solve; without it every solve takes under ~65ms.
+- **No 5-piece lookup tables**: lower bounds use 2-3 piece tables only. The first solve takes ~250ms to build them; later solves ~0.6ms.
 
 - **3D turn animation** (feat-004): the store changes state immediately; the renderer keeps drawing the old state and rotates the moving layer, then swaps to the new state. `geometry.test.ts` proves that for all 54 moves the turned layer lands exactly on cubejs's new state, so the swap can't flicker. Turning cubelets live in a fresh `<group key>` per turn; while React catches up after a turn ends, the group is held at its end angle.
 - **Flat net kept as the fallback** when WebGL is missing or the 3D chunk fails to load (e.g. offline). jsdom has no WebGL, so `TutorScreen.test.tsx` runs against the net.
@@ -109,8 +109,8 @@
 
 ## Evidence of Completion
 
-- [x] `./init.sh` passes on Node 24: npm ci, typecheck, lint, 148/148 tests, build
-- [x] 100 seeded random scrambles: block built, each step leaves its pieces home, at most 14 moves; 300 random cubes: ~9.2 moves average, median 0.5ms
+- [x] `./init.sh` passes on Node 24: npm ci, typecheck, lint, 149/149 tests, build
+- [x] 100 seeded random scrambles: every free/join/insert phase checked; 300 random cubes: ~9.9 moves average, max 15, median 0.6ms
 
 ## Notes for Next Session
 

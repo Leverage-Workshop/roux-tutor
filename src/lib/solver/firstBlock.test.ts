@@ -30,6 +30,25 @@ const BACK_PAIR: TrackedPiece[] = [DL, { kind: "edge", piece: EDGES.BL }, { kind
 const allHome = (state: CubeState, pieces: TrackedPiece[]) =>
   pieces.every((p) => pieceCoord(state, p) === homeCoord(p));
 
+/**
+ * A pair is joined when some whole-cube rotation of the solved cube puts its
+ * corner and edge exactly where they are now (checked straight from cubejs).
+ */
+const ROTATIONS = ["", "x", "x'", "x2", "z", "z'"].flatMap((a) => ["", "y", "y'", "y2"].map((b) => `${a} ${b}`));
+function isPairJoined(state: CubeState, [, edge, corner]: TrackedPiece[]): boolean {
+  return ROTATIONS.some((rotation) => {
+    const turned = applyMoves(solvedState(), rotation);
+    return pieceCoord(turned, edge) === pieceCoord(state, edge) && pieceCoord(turned, corner) === pieceCoord(state, corner);
+  });
+}
+
+/** Neither piece sits in a left-side slot that U, R, r and M can't reach. */
+function pairIsFree(state: CubeState, [, edge, corner]: TrackedPiece[]): boolean {
+  const edgePos = Math.floor(pieceCoord(state, edge) / 2);
+  const cornerPos = Math.floor(pieceCoord(state, corner) / 3);
+  return ![EDGES.FL, EDGES.BL, EDGES.DL].includes(edgePos as 9) && ![CORNERS.DLF, CORNERS.DBL].includes(cornerPos as 5);
+}
+
 describe("isFirstBlockSolved", () => {
   it("is true on a solved cube and after moves that leave the left block alone", () => {
     expect(isFirstBlockSolved(solvedState())).toBe(true);
@@ -62,46 +81,71 @@ describe("solveFirstBlock", () => {
   it("does nothing on a solved cube", () => {
     const solution = solveFirstBlock(solvedState());
     expect(solution.moves).toEqual([]);
-    expect(solution.steps.map((s) => s.id)).toEqual(["dl-edge", "front-pair", "back-pair"]);
+    expect(solution.steps).toEqual([]);
   });
 
   it("does nothing when only the right side is scrambled", () => {
     expect(solveFirstBlock(scrambled("R U R' U2 R2 U' R'")).moves).toEqual([]);
   });
 
-  it("fixes just the broken pair", () => {
-    const solution = solveFirstBlock(scrambled("F U F'"));
-    // F U F' takes the front pair out; U' F' already puts it back.
-    expect(solution.moves).toEqual(["U'", "F'"]);
-    const byId = Object.fromEntries(solution.steps.map((s) => [s.id, s.moves]));
-    expect(byId["dl-edge"]).toEqual([]);
-    expect(byId["back-pair"]).toEqual([]);
-    expect(byId["front-pair"]).toEqual(["U'", "F'"]);
+  it("frees, joins and inserts a broken pair", () => {
+    // F' drops the front pair to the bottom, U R U' splits it, F puts it back.
+    const solution = solveFirstBlock(scrambled("F' U R U' F"));
+    expect(solution.steps.map((s) => [s.id, s.moves.join(" ")])).toEqual([
+      ["front-pair-free", "F'"],
+      ["front-pair-join", "U R'"],
+      ["front-pair-insert", "F"],
+    ]);
   });
 
-  it("builds the block on 100 random scrambles, one piece group per step", () => {
+  it("skips joining when the pair is still joined", () => {
+    // F U F' lifts the front pair out, but it stays joined.
+    const solution = solveFirstBlock(scrambled("F U F'"));
+    expect(solution.steps.map((s) => s.id)).toEqual(["front-pair-insert"]);
+  });
+
+  it("builds the block on 100 random scrambles, Roux style", () => {
     for (const scramble of scrambles(100)) {
       const label = scramble.join(" ");
       const solution = solveFirstBlock(scrambled(scramble));
       let state = scrambled(scramble);
+      const donePairs: TrackedPiece[][] = [];
       for (const step of solution.steps) {
-        state = applyMoves(state, step.moves);
-        if (step.id === "dl-edge") expect(allHome(state, [DL]), label).toBe(true);
-        if (step.id === "front-pair") expect(allHome(state, FRONT_PAIR), label).toBe(true);
-        if (step.id === "back-pair") expect(allHome(state, BACK_PAIR), label).toBe(true);
+        const pair = step.id.startsWith("front") ? FRONT_PAIR : BACK_PAIR;
+        if (step.id.endsWith("-join")) {
+          // Joining never touches the left side.
+          for (const move of step.moves) expect(move, label).toMatch(/^[URMr][2']?$/);
+        }
+        if (step.id.endsWith("-insert")) {
+          // The pair moves as one piece: joined before and after every move.
+          expect(isPairJoined(state, pair), label).toBe(true);
+          for (const move of step.moves) {
+            state = applyMoves(state, [move]);
+            expect(isPairJoined(state, pair), `${label} / ${step.moves.join(" ")}`).toBe(true);
+          }
+        } else {
+          state = applyMoves(state, step.moves);
+        }
+        if (step.id.endsWith("-free")) {
+          expect(pairIsFree(state, pair), label).toBe(true);
+        }
+        if (step.id.endsWith("-join")) expect(isPairJoined(state, pair), label).toBe(true);
+        if (step.id.endsWith("-insert")) donePairs.push(pair);
+        // The bottom-left edge and finished pairs stay in place after every step.
+        if (step.id !== "orient") expect(allHome(state, [DL, ...donePairs.flat()]), `${label} after ${step.id}`).toBe(true);
       }
       expect(isFirstBlockSolved(state), label).toBe(true);
       expect(solution.moves).toEqual(solution.steps.flatMap((s) => s.moves));
-      // Short enough to follow by hand.
-      expect(solution.moves.length, label).toBeLessThanOrEqual(14);
+      expect(solution.moves.length, label).toBeLessThanOrEqual(20);
     }
   });
 
-  it("uses face turns only, so every center stays in place", () => {
+  it("uses slice and wide turns only to join pairs", () => {
     for (const scramble of scrambles(30)) {
-      const solution = solveFirstBlock(scrambled(scramble));
-      for (const move of solution.moves) expect(move).toMatch(/^[UDFBLR][2']?$/);
-      expect(applyMoves(scrambled(scramble), solution.moves).center).toEqual([0, 1, 2, 3, 4, 5]);
+      for (const step of solveFirstBlock(scrambled(scramble)).steps) {
+        if (step.id.endsWith("-join")) continue;
+        for (const move of step.moves) expect(move).toMatch(/^[UDFBLRxyz][2']?$/);
+      }
     }
   });
 

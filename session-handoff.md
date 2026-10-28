@@ -10,15 +10,16 @@
 
 - [x] Piece tracking with move tables taken from cubejs (`pieces.ts`)
 - [x] Reusable shortest-path search over a few pieces (`search.ts`), ready for SB
-- [x] First block solved as beginners learn it: rotation if needed, DL edge, front pair, back pair (shorter order first)
+- [x] First block solved Roux style: rotation if needed, DL edge, then each pair freed (if stuck), joined with U/R/r/M, and inserted as a unit
+- [x] Revised after owner review: pairs are now actually formed before insertion, not just solved by shortest path
 
 ## Verification Evidence
 
 | Check | Command | Result | Notes |
 |---|---|---|---|
-| Full harness | `./init.sh` | Pass | 148/148 tests (14 new) |
-| Solver on random cubes | `firstBlock.test.ts` | Pass | 100 seeded scrambles; each step leaves its pieces home; at most 14 moves |
-| Speed | ad hoc benchmark, 300 random cubes | ~9.2 moves avg | median 0.5ms, max ~65ms |
+| Full harness | `./init.sh` | Pass | 149/149 tests (15 new) |
+| Solver on random cubes | `firstBlock.test.ts` | Pass | 100 seeded scrambles; every free/join/insert phase checked |
+| Speed | ad hoc benchmark, 300 random cubes | ~9.9 moves avg, max 15 | median 0.6ms, first solve ~250ms |
 
 ## Files Changed
 
@@ -26,12 +27,12 @@
 
 ## Decisions Made
 
-- See "Decisions Made" in `progress.md` (line + pairs, face turns only, standard centers, tie-breaks)
+- See "Decisions Made" in `progress.md` (Roux-style free/join/insert pairs, slice turns only while joining, standard centers, tie-breaks)
 
 ## Blockers / Risks
 
 - The solver is not used by `/tutor` yet; the demo lesson stays hand-written until SB, CMLL and LSE exist
-- SB will need M-slice center offsets handled (SB uses r and M)
+- FB can leave the M-slice centers turned (after joining with M or r); SB and LSE must handle that
 
 ## Next Session Startup
 

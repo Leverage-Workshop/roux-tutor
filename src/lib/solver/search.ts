@@ -66,30 +66,79 @@ function tableIndex(coords: readonly number[]): number {
   return index;
 }
 
+function tableCoords(index: number, count: number): number[] {
+  const coords: number[] = [];
+  for (let i = 0; i < count; i++) {
+    coords.push(index % 24);
+    index = Math.floor(index / 24);
+  }
+  return coords;
+}
+
+/** A rule over some pieces' coordinates, e.g. "all home" or "joined as a pair". */
+export type CoordRule = (coords: readonly number[]) => boolean;
+
+/** All pieces home and oriented. */
+export function allHome(pieces: readonly TrackedPiece[]): CoordRule {
+  const home = pieces.map(homeCoord);
+  return (coords) => coords.every((c, i) => c === home[i]);
+}
+
+/**
+ * A lower bound from a few of the step's pieces: how many moves those pieces
+ * alone need to satisfy `goal`, never leaving states that satisfy `keep`.
+ */
+export interface Bound {
+  /** Indexes into the step's pieces; at most 4. */
+  subset: readonly number[];
+  /** Names the goal and keep rules, for caching the table. */
+  key: string;
+  goal: CoordRule;
+  keep?: CoordRule;
+}
+
+export function homeBound(pieces: readonly TrackedPiece[], subset: readonly number[]): Bound {
+  const sub = subset.map((i) => pieces[i]);
+  return { subset, key: "home", goal: allHome(sub) };
+}
+
 const UNSEEN = 255;
 const tableCache = new Map<string, Uint8Array>();
 
 /**
- * Moves needed to bring every piece in `pieces` home, for every placement
- * of them (breadth-first search out from the solved placement). Up to 4 pieces.
+ * Moves needed to satisfy `goal`, for every placement of up to 4 pieces
+ * (breadth-first search out from every placement that satisfies it).
+ * With `keep`, only placements that satisfy `keep` are passed through.
  */
-export function distanceTable(pieces: readonly TrackedPiece[], moves: readonly SearchMove[]): Uint8Array {
-  const key = `${moves.map((m) => m.move).join(",")}|${pieces.map((p) => `${p.kind}${p.piece}`).join(",")}`;
-  const cached = tableCache.get(key);
+export function distanceTable(
+  pieces: readonly TrackedPiece[],
+  moves: readonly SearchMove[],
+  goal: CoordRule,
+  keep: CoordRule | undefined,
+  key: string,
+): Uint8Array {
+  const cacheKey = `${moves.map((m) => m.move).join(",")}|${pieces.map((p) => `${p.kind}${p.piece}`).join(",")}|${key}`;
+  const cached = tableCache.get(cacheKey);
   if (cached) return cached;
   if (pieces.length > 4) throw new Error("Distance tables support at most 4 pieces");
 
-  const dist = new Uint8Array(24 ** pieces.length).fill(UNSEEN);
-  const home = pieces.map(homeCoord);
-  dist[tableIndex(home)] = 0;
-  let frontier = [home];
+  const size = 24 ** pieces.length;
+  const dist = new Uint8Array(size).fill(UNSEEN);
+  let frontier: number[][] = [];
+  for (let index = 0; index < size; index++) {
+    const coords = tableCoords(index, pieces.length);
+    if (goal(coords) && (!keep || keep(coords))) {
+      dist[index] = 0;
+      frontier.push(coords);
+    }
+  }
   for (let depth = 0; frontier.length > 0; depth++) {
     const next: number[][] = [];
     for (const coords of frontier) {
       for (const m of moves) {
         const moved = applyMove(pieces, coords, m);
         const index = tableIndex(moved);
-        if (dist[index] === UNSEEN) {
+        if (dist[index] === UNSEEN && (!keep || keep(moved))) {
           dist[index] = depth + 1;
           next.push(moved);
         }
@@ -97,15 +146,18 @@ export function distanceTable(pieces: readonly TrackedPiece[], moves: readonly S
     }
     frontier = next;
   }
-  tableCache.set(key, dist);
+  tableCache.set(cacheKey, dist);
   return dist;
 }
 
 export interface StepGoal {
-  /** Pieces that must all end home and oriented. */
   pieces: readonly TrackedPiece[];
-  /** Subsets of `pieces` (as indexes) with distance tables; each gives a lower bound. */
-  bounds: readonly (readonly number[])[];
+  /** True when the step is done. */
+  goal: CoordRule;
+  /** When set, every position along the way must satisfy it (e.g. a pair stays joined). */
+  keep?: CoordRule;
+  /** Lower bounds for the search; more and tighter bounds make it faster. */
+  bounds: readonly Bound[];
 }
 
 export interface SearchOptions {
@@ -117,14 +169,20 @@ export interface SearchOptions {
 }
 
 /** Every shortest solution (up to maxSolutions) from `start` coordinates. */
-export function shortestSolutions(goal: StepGoal, start: readonly number[], options: SearchOptions): Move[][] {
-  const { pieces, bounds } = goal;
+export function shortestSolutions(step: StepGoal, start: readonly number[], options: SearchOptions): Move[][] {
+  const { pieces, goal, keep, bounds } = step;
   const { moves, maxDepth, maxSolutions } = options;
-  const tables = bounds.map((subset) => ({
-    subset,
-    dist: distanceTable(subset.map((i) => pieces[i]), moves),
+  if (keep && !keep(start)) throw new Error("Start position breaks the step's keep rule");
+  const tables = bounds.map((b) => ({
+    subset: b.subset,
+    dist: distanceTable(
+      b.subset.map((i) => pieces[i]),
+      moves,
+      b.goal,
+      b.keep,
+      b.key,
+    ),
   }));
-  const home = pieces.map(homeCoord);
 
   const lowerBound = (coords: readonly number[]) => {
     let h = 0;
@@ -133,26 +191,28 @@ export function shortestSolutions(goal: StepGoal, start: readonly number[], opti
     }
     return h;
   };
-  const isHome = (coords: readonly number[]) => coords.every((c, i) => c === home[i]);
 
   const solutions: Move[][] = [];
   const path: SearchMove[] = [];
   const search = (coords: readonly number[], remaining: number): void => {
     if (remaining === 0) {
-      if (isHome(coords)) solutions.push(path.map((m) => m.move));
+      if (goal(coords)) solutions.push(path.map((m) => m.move));
       return;
     }
     if (lowerBound(coords) > remaining) return;
     for (const m of moves) {
       if (!canFollow(path[path.length - 1], m)) continue;
+      const moved = applyMove(pieces, coords, m);
+      if (keep && !keep(moved)) continue;
       path.push(m);
-      search(applyMove(pieces, coords, m), remaining - 1);
+      search(moved, remaining - 1);
       path.pop();
       if (solutions.length >= maxSolutions) return;
     }
   };
 
   for (let depth = lowerBound(start); depth <= maxDepth; depth++) {
+    if (depth >= UNSEEN) break;
     search(start, depth);
     if (solutions.length > 0) return solutions;
   }
