@@ -36,14 +36,14 @@
 
 ## Blockers / Risks
 
-- Claude's shell gets Node 22, not 24: see Blockers in `progress.md`
+- Node 24 in cloud sessions is handled by the SessionStart hook (`.claude/hooks/session-start.sh`)
 
 ## Next Session Startup
 
 1. Read `AGENTS.md` (`CLAUDE.md` imports it).
 2. Read `feature_list.json` and `progress.md`.
 3. Review this handoff.
-4. Run `export PATH=/opt/node24/bin:$PATH` then `./init.sh` before editing.
+4. Run `./init.sh` before editing (the SessionStart hook puts Node 24 on PATH).
 5. Run `git fetch origin` and check for unmerged feature branches before picking a feature.
 
 ## Recommended Next Step

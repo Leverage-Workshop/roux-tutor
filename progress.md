@@ -45,7 +45,7 @@
 - [ ] Supabase free plan pauses a project after a week without activity; the Leverage Workshop org now uses both free project slots (Gekko, roux-tutor)
 - [ ] Human-style Roux solver (FB/SB) is the hardest part; no off-the-shelf library does it
 - [ ] `fromFacelets` only checks format and that each corner/edge is a real piece. Full legality (each piece once, corner twist, edge flip, parity) is still to do in feat-005
-- [ ] Claude's shell in the cloud container gets Node 22, not 24. The setup script installs `/opt/node24` and puts it on PATH in line 1 of `~/.bashrc`, but Claude's non-interactive shell never reads `~/.bashrc`, and `/opt/node22/bin` is on the default PATH. Workaround: `export PATH=/opt/node24/bin:$PATH` before `./init.sh`. Likely fix: a SessionStart hook that writes that export to `$CLAUDE_ENV_FILE`. (A parallel session on 2026-10-27 thought moving the line to the top of `~/.bashrc` would fix it; the line is already there and the shell still gets Node 22.)
+- [x] Fixed 2026-10-28: Claude's shell in the cloud container got Node 22 (`/opt/node22/bin` is on the default PATH and Claude's shell never reads `~/.bashrc`). `.claude/hooks/session-start.sh` (SessionStart hook, registered in `.claude/settings.json`) now writes `/opt/node24/bin` to the front of PATH via `$CLAUDE_ENV_FILE` and runs `npm install`. Takes effect for sessions that start from a branch containing the hook; no manual `export PATH` needed
 
 ## Decisions Made
 
