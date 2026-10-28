@@ -2,26 +2,26 @@
 
 ## Current Objective
 
-- Goal: Roux Solver: CMLL (feat-008)
-- Current status: Done. `solveCmll(state)`, `isCmllSolved`, `solveThroughCmll` in `src/lib/solver/cmll.ts`; the 42-case table in `src/lib/solver/cmllCases.ts`
+- Goal: Roux Solver: LSE (feat-009)
+- Current status: Done. `solveLse(state)`, `isLseSolved`, `lseBadEdges` in `src/lib/solver/lse.ts`; the full chain `solveRoux(state)` in `src/lib/solver/roux.ts`
 - Branch / commit: see `git log --oneline -1`
 
 ## Completed This Session
 
-- [x] 42 CMLL algorithms (O, H, Pi, U, T, S, AS, L) stored as data with id, set, name, nickname, algorithm and a generated recognition note
-- [x] Every algorithm checked by computer; two remembered ones replaced (H 3 solved a Pi case, S 4 broke the second block)
-- [x] Recognition from the corners relative to the blocks only (works with the middle slice turned); lookup table over all 647 unsolved top-corner states picks the shortest pre-AUF + algorithm + post-AUF
-- [x] Steps `cmll-pre-auf`, `cmll` (carries `case`), `cmll-post-auf`; corners end solved relative to the blocks
-- [x] `solveThroughCmll` chains FB + SB + CMLL
+- [x] LSE with U and M only, in three human phases: `lse-eo` (orient edges), `lse-ulur` (white-orange and white-red edges between their own corners), `lse-ep` (last four edges, centers, final top-layer turn)
+- [x] Each step carries `case { id, name, recognition }` (e.g. `eo-3-1` "arrow (3 bad on top, 1 on the bottom)", `ulur-top-bottom`, `ep-3-cycle-db`) and `centersOff`
+- [x] Distance tables over all 184,320 LSE states: every phase as short as possible; ties go to shorter later phases, then no same-layer step starts, then easier moves
+- [x] After EO no move makes an edge bad again (quarter U turns only while the white/yellow centers are up/down)
+- [x] `solveRoux` chains FB, SB, CMLL, LSE into `{ moves, stages: [{ stage, moves, steps }] }`; CMLL's last top-layer turn is left to LSE when that's not longer
 
 ## Verification Evidence
 
 | Check | Command | Result | Notes |
 |---|---|---|---|
-| Full harness | `./init.sh` | Pass | 182/182 tests (20 new) |
-| Table | `cmllCases.test.ts` | Pass | each algorithm keeps both blocks and L/R centers, no rotations, solves its case, right set; 42 distinct cases |
-| Solver | `cmll.test.ts` | Pass | all 648 top-corner states, fewest moves from the table; 120 seeded scrambles through FB + SB + CMLL |
-| Speed / length | ad hoc benchmark, 1000 random cubes | 11.3 moves avg, max 17 | first call ~40ms (table), then median 0.02ms |
+| Full harness | `./init.sh` | Pass | 204/204 tests (22 new) |
+| LSE | `lse.test.ts` | Pass | state-space counts; all 5,760 oriented states + 32 flip patterns x 180 sampled states + 3,000 random states, every phase checked move by move; exact arrow, 1-1, 4-0, 3-cycle, two-swap, centers-only, AUF, previous-move cases |
+| Chain | `roux.test.ts` | Pass | 120 seeded scrambles with slice/wide turns end solved; maps onto `createLesson` |
+| Speed / length | ad hoc benchmark, 1000 random cubes | full 48.1 moves avg (LSE 12.4), max 61 | LSE tables ~30-50ms first call, then median 0.05ms; full solve median 3ms |
 
 ## Files Changed
 
@@ -29,14 +29,14 @@
 
 ## Decisions Made
 
-- See "Decisions Made" in `progress.md` (table lookup, corners end fully solved, neutral case names, generated recognition notes)
+- See "Decisions Made" in `progress.md` (phase-optimal LSE, edge orientation rule, EO kept, UL/UR may leave the top layer a half turn off, EP cases relative to the centers, CMLL post-AUF left to LSE in `solveRoux`)
 
 ## Blockers / Risks
 
-- The solver is not used by `/tutor` yet; the demo lesson stays hand-written until LSE exists
-- CMLL may start on the layer SB ended on (~13% of cubes, e.g. `R'` then Sune's `R`); left as is, one algorithm per case
-- For LSE (feat-009): after CMLL only UL, UR, UF, UB, DF, DB and the M-slice centers are unsolved. Centers can be in any of the 4 M positions (CMLL algorithms with r/M move them too). Step ids so far: FB `orient`, `dl-edge`, `front|back-pair-*`; SB `dr-edge`, `front|back-right-pair-*`; CMLL `cmll-pre-auf`, `cmll`, `cmll-post-auf`. Pick LSE ids that don't clash (e.g. `lse-eo`, `lse-ulur`, `lse-ep`)
-- For explanations (feat-010): the `cmll` step has `case` (`id` like `t-1`, `set`, `name`, `recognition`); `CMLL_SETS` gives each set's label and shape text
+- The solver is not used by `/tutor` yet; the demo lesson is still hand-written (feat-010 or later)
+- Phase-by-phase LSE is sometimes longer than a combined solve (1-1 EO is 6 moves); accepted for teaching
+- `solveRoux` drops CMLL's `cmll-post-auf` when LSE does as well without it; revert by removing the second candidate in `solveRoux` if the owner wants CMLL to always end lined up
+- For explanations (feat-010): step ids across all stages are FB `orient`, `dl-edge`, `front|back-pair-free|join|insert`; SB `dr-edge`, `front|back-right-pair-free|join|insert`; CMLL `cmll-pre-auf`, `cmll`, `cmll-post-auf`; LSE `lse-eo`, `lse-ulur`, `lse-ep`. CMLL and LSE steps also have `case` (stable `id`, `name`, `recognition`); LSE steps have `centersOff`
 
 ## Next Session Startup
 
@@ -48,4 +48,4 @@
 
 ## Recommended Next Step
 
-- feat-009 LSE: start from `solveThroughCmll(state)`; solve the six edges and the M-slice centers with U and M only
+- feat-010 move explanations: build the dictionary on step ids and cases, then load `solveRoux` output into the tutor (one lesson stage per Roux stage)
