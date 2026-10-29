@@ -37,8 +37,8 @@
       "name": "Manual Facelet Entry",
       "description": "Interactive 6-face grid where the user taps facelets to set colors, with validation that the result is a legal cube state. Doubles as the scanner's correction screen",
       "dependencies": ["feat-002"],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "2026-10-29: /enter (src/components/facelets/FaceletEditor.tsx, src/app/enter/page.tsx) with full legality check in src/lib/cube/validate.ts; 'Solve this cube' opens /tutor?cube=<facelets>, solved on the server (src/lib/tutor/cubeLesson.ts). ./init.sh passed (typecheck, lint, 247/247 vitest incl. 32 new in validate.test.ts, FaceletEditor.test.tsx, cubeLesson.test.ts, next build: /enter and /tutor partial prerender). Tests: 550 random legal cubes accepted and match cubejs's state; twisted corner, flipped edge, swapped pieces (parity), mirrored corner, repeated/opposite colors, duplicate pieces, over-count each flagged. Playwright on next start, 390x844/375x667/320x568 light+dark: no page scroll; tapped a full scramble in (~4s scripted), refresh kept the draft, a wrong sticker was flagged on the right faces, Solve opened a 47-move lesson showing the entered cube, Edit cube returned with the draft, bad/nonsense URLs show a fix-it page, no console errors; no solver code in .next/static."
     },
     {
       "id": "feat-006",

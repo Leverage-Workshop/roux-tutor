@@ -67,8 +67,10 @@ export interface LessonPhase {
 }
 
 export interface Lesson {
-  /** Moves that take a solved cube to the starting position. */
+  /** Moves that take a solved cube to the starting position (empty for an entered cube). */
   scramble: Move[];
+  /** The starting position as a facelet string, when the cube was entered rather than scrambled. */
+  start?: string;
   steps: TutorStep[];
   /** The solve's steps; each move's `phase` points here. Absent for hand-made lessons. */
   phases?: LessonPhase[];

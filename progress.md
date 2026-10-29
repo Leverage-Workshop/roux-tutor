@@ -2,8 +2,8 @@
 
 ## Current State
 
-**Last Updated:** 2026-10-28
-**Active Feature:** feat-010 - Move Explanations (done)
+**Last Updated:** 2026-10-29
+**Active Feature:** feat-005 - Manual Facelet Entry (done)
 
 ## Status
 
@@ -77,15 +77,21 @@
   - `/tutor` (`page.tsx`, Server Component) calls `demoLesson()` while prerendering; only the finished lesson reaches the browser
   - `TutorDrawer`: big move + (step name over the step's moves), the move's explanation as the drawer description, an inline "About this step" toggle that shows the step goal (closes when the next step starts, scrolls into view), `.scroll-shadows` (globals.css) on the scroll area
 
+- [x] feat-005 Manual Facelet Entry at `/enter` (linked from `/` as "Enter your cube")
+  - `src/lib/cube/validate.ts`: `checkFacelets(draft)` for a 54-letter draft ("." = blank, standard centers): blanks, per-color counts, problems with the stickers to mark (repeated or opposite colors on a piece and mirrored corners as soon as they show up, duplicate pieces, too many of a color; once complete: corner twist, edge flip, parity), and the `CubeState` when legal. `parseDraft` for URL input, `EMPTY_DRAFT`, `CORNER_FACELETS` / `EDGE_FACELETS`
+  - `FaceletEditor.tsx`: face tabs (mini previews, red dot when a face has a marked sticker), hold hint per face ("green facing you, white on top"), big 3x3 face with the neighboring centers' colors as edge bars, fixed centers, 6-color palette with "n left" counts, status line (first problem + count of others / stickers left / ready), Clear face, Solve this cube (link to `/tutor?cube=`). The draft is mirrored into `/enter?cube=` with `history.replaceState` after each edit
+  - `/tutor?cube=<54 letters>`: `lessonForCube` (`src/lib/tutor/cubeLesson.ts`) solves it on the server with `rouxLessonFromState`; bad or illegal cubes get a "This cube can't be solved" page with the reason and "Fix it in the editor". No `cube` = the demo as before. `Lesson.start` (facelets) for entered cubes; TutorScreen starts from it and shows an "Edit cube" link
+
 ### What's In Progress
 
 - Nothing
 
 ### What's Next
 
-1. "New scramble" / solve-your-own-cube on `/tutor` (skipped in feat-010): needs the solver in the browser as a lazy chunk (~300ms table build on first solve, more on slow phones; or a route handler / server action), a way to show the scramble so a learner can set up a real cube, and room in the header. Natural to do together with feat-005 (manual facelet entry) handing a cube to the tutor
-2. Save tutoring sessions from `/tutor`: if signed in, call `startTutoringSession` when a solve loads, `saveTutoringProgress` on Next/Back (debounced), `completeTutoringSession` at the end
-3. Optional for the 3D view: a "reset view" button after orbiting, and swiping on the cube to turn layers (the PRD's "interactions on the cube trigger visual layer rotations"; not part of feat-004)
+1. feat-011 Camera Scanner (unblocked): open `/enter?cube=<draft>` with the scanned guesses ("." for stickers it couldn't read) for the user to correct
+2. Optional: "New scramble" on `/tutor` (random cube to set up by hand): now cheap, since `/tutor?cube=` solves any cube on the server; needs a way to show the scramble moves
+3. Save tutoring sessions from `/tutor`: if signed in, call `startTutoringSession` when a solve loads, `saveTutoringProgress` on Next/Back (debounced), `completeTutoringSession` at the end
+4. Optional for the 3D view: a "reset view" button after orbiting, and swiping on the cube to turn layers (the PRD's "interactions on the cube trigger visual layer rotations"; not part of feat-004)
 
 ## Blockers / Risks
 
@@ -98,10 +104,19 @@
 - [ ] On 375x667 and smaller phones most explanations need a short scroll inside the sheet (scroll shadow shows it). If the owner wants no scrolling there, options: drop the title row (the stage indicator already names the stage), or shorten the texts further
 - [ ] In `solveRoux` CMLL's `cmll-post-auf` turn is dropped when LSE does as well without it (see Decisions), so a `cmll-post-auf` step appears less often in full solves than in `solveCmll` alone
 - [ ] CMLL often starts on the layer SB ended on (13% of 1000 random cubes, e.g. SB's insert `... R'` then Sune's `R U R' ...`); a human would cancel those moves. Left as is: each case has one algorithm. If it bothers the owner, add mirrored/alternative algorithms per case and pick by the previous move
-- [ ] `fromFacelets` only checks format and that each corner/edge is a real piece. Full legality (each piece once, corner twist, edge flip, parity) is still to do in feat-005
+- [x] Full facelet legality (each piece once, corner twist, edge flip, parity): `checkFacelets` in `validate.ts` (feat-005)
+- [ ] `/tutor` is no longer fully static (feat-005): it reads `?cube=`, so the page is a static shell ("Working out the solve…") plus the lesson streamed per request. The demo is solved once per server instance (cached in `demoLesson`), any other cube in a few ms (~0.3s on a cold server). Could add `"use cache"` around `lessonForCube` if traffic grows
+- [ ] Editor centers are fixed to the standard scheme (white top, green front). A cube with a different color scheme can't be entered; the scanner should normalize orientation before handing over
 - [x] Fixed 2026-10-28: Claude's shell in the cloud container got Node 22 (`/opt/node22/bin` is on the default PATH and Claude's shell never reads `~/.bashrc`). `.claude/hooks/session-start.sh` (SessionStart hook, registered in `.claude/settings.json`) now writes `/opt/node24/bin` to the front of PATH via `$CLAUDE_ENV_FILE` and runs `npm install`. Takes effect for sessions that start from a branch containing the hook; no manual `export PATH` needed
 
 ## Decisions Made
+
+- **Entered cubes are solved on the server** (owner's choice, 2026-10-29): `/tutor?cube=<54 letters>`, solved in the page's Server Component, so phones never download the solver (checked `.next/static`) and links survive refresh and sharing. Alternative was a lazy solver chunk in the browser, keeping `/tutor` static.
+- **Facelet editor shows one face at a time, large**: a full 6-face net at 390px gives ~28px stickers, too small for thumbs; one face gives ~95px stickers, and face tabs with mini previews still show the whole cube. Faces go Front, Right, Back, Left, Top, Bottom (turn the cube around, then tilt).
+- **Centers fixed, standard scheme**: the user holds the cube white top / green front; each face's hint says what faces you and what's on top, and edge bars show the neighboring centers. Keeps validation simple and matches the solver's expected orientation (no starting rotation).
+- **Tap paints with the chosen color** (no tap-to-cycle, no eraser): fixing a mistake is just painting the right color; "Clear face" blanks a face (only that face, so a slip costs little).
+- **Problems shown as early as possible**: per-piece problems as soon as the piece's filled stickers show them, marked with a dashed red outline and a red dot on the face tab; twist/flip/parity only once every sticker is in (they can't be pinned to stickers). Piece problems are listed before "too many of a color", which marks no stickers (it would light up most faces).
+- **Draft kept in the URL** (`/enter?cube=`, updated with `history.replaceState` after each edit, never on mount so the blank loading fallback can't wipe a draft): refresh, browser back and the tutor's "Edit cube" all return to it. The scanner can hand over its guesses the same way.
 
 - **Explanations are computed from the cube, not hand-written per move** (feat-010): an entry is chosen by stage + step + case + what the move does on the cube at that point, so every solve the solver can produce gets specific text. Fallback entries (`.other`) exist per step type but 20,000 random cubes never used one; a test runs 240 seeded solves. Purpose statements that depend on later moves ("so the next M turn can take it down", "so the next turn doesn't trap it again", "a later right-side turn carries a pair piece back") are only used after checking those moves; otherwise a plainer factual entry is used.
 - **Per-move CMLL text is lighter**: "R' (right side down): move 3 of 7 of the Sune algorithm", plus whether this move takes a block apart or puts it back; the case's recognition stays in the step goal ("About this step"). S/AS cases use the Sune / Anti-Sune names learners know ("Anti-Sune 4").
@@ -159,6 +174,8 @@
 
 ## Files Modified This Session
 
+- feat-005: `src/lib/cube/validate.ts`, `validate.test.ts`, `src/components/facelets/FaceletEditor.tsx`, `FaceletEditor.test.tsx`, `src/app/enter/page.tsx`, `src/lib/tutor/cubeLesson.ts`, `cubeLesson.test.ts` (new); `src/app/tutor/page.tsx`, `src/components/tutor/TutorScreen.tsx`, `src/lib/tutor/lesson.ts` (`start`), `rouxLesson.ts` (`rouxLessonFromState`), `src/lib/cube/model.ts` (comment), `src/app/page.tsx` (link); `feature_list.json`, `progress.md`, `session-handoff.md`
+
 - feat-010: `src/lib/tutor/explanations.ts`, `explanations.test.ts`, `rouxLesson.ts` (new); `demoLesson.ts`, `demoLesson.test.ts`, `lesson.ts`; `src/app/tutor/page.tsx`; `src/components/tutor/TutorDrawer.tsx`, `TutorScreen.test.tsx`; `src/app/globals.css` (`.scroll-shadows`); solver tests now use `DEMO_SCRAMBLE` (`firstBlock.test.ts`, `secondBlock.test.ts`, `roux.test.ts`); `feature_list.json`, `progress.md`, `session-handoff.md`
 - feat-009: `src/lib/solver/lse.ts`, `lse.test.ts`, `roux.ts`, `roux.test.ts` (new); `feature_list.json`, `progress.md`, `session-handoff.md`
 - feat-008: `src/lib/solver/cmllCases.ts`, `cmllCases.test.ts`, `cmll.ts`, `cmll.test.ts` (new); `feature_list.json`, `progress.md`, `session-handoff.md`
@@ -166,6 +183,9 @@
 - feat-006 (earlier): `src/lib/solver/pieces.ts`, `search.ts`, `firstBlock.ts` and tests
 
 ## Evidence of Completion
+
+- [x] feat-005: `./init.sh` passes on Node 24: npm ci, typecheck, lint, 247/247 tests (32 new), build (`/enter`, `/tutor` partial prerender)
+- [x] feat-005: 550 random legal cubes (`Cube.random`) accepted, state equal to cubejs's; each problem kind produced and flagged by construction (twist, flip, parity, mirrored corner, repeated/opposite colors, duplicate piece, over-count, centers). Playwright on `next start` at 390x844, 375x667, 320x568, light and dark: no horizontal or page scroll; a scrambled cube tapped in sticker by sticker, status "Ready to solve", URL holds the draft and reload keeps it; one wrong sticker gives "There are 2 white-red edges ..." with the faces marked; Solve opens `/tutor?cube=...` with a 47-move lesson whose 3D cube matches the entry; "Edit cube" returns to the draft; illegal and nonsense `cube` values show the fix-it page; no console errors. Screenshots were kept outside the repo
 
 - [x] feat-010: `./init.sh` passes on Node 24: npm ci, typecheck, lint, 215/215 tests (11 new), build (`/tutor` static)
 - [x] feat-010: 240 seeded random solves (slice/wide turns, rotations; >10,000 moves) all get a specific entry; ad hoc 20,000 random-state cubes: no fallback used; explanation length median 108, p99 199, max 239 chars. Playwright on `next start` at 390x844, 375x667, 320x568, light and dark: sheet at 60%, no horizontal/page scroll, 47 distinct explanations stepping through, Back/Next in view on every move, goal toggle keeps the sheet in place, no console errors. Screenshots were kept outside the repo
