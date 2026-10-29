@@ -51,6 +51,12 @@ export default function Home() {
         >
           Try a demo solve
         </Link>
+        <Link
+          href="/enter"
+          className="mx-auto flex min-h-12 items-center rounded-full border border-zinc-300 px-6 font-semibold dark:border-zinc-700"
+        >
+          Enter your cube
+        </Link>
       </div>
 
       <ol className="flex w-full flex-col gap-3 text-left">

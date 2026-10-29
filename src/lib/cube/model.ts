@@ -71,7 +71,7 @@ export function toFacelets(state: CubeState): string {
  * Build a state from a 54-letter facelet string.
  * Checks the format (length, letters, 9 of each, distinct centers) and that
  * every corner and edge is a real piece. Full legality (each piece used once,
- * twist, flip, parity) is checked by the facelet editor (feat-005).
+ * twist, flip, parity) is checked by checkFacelets in validate.ts.
  */
 export function fromFacelets(facelets: string): CubeState {
   if (facelets.length !== 54) {
