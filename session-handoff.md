@@ -2,26 +2,27 @@
 
 ## Current Objective
 
-- Goal: Manual Facelet Entry (feat-005)
-- Current status: Done. `/enter` lets the user tap in their cube face by face with live legality checks; "Solve this cube" opens `/tutor?cube=<facelets>`, solved on the server
+- Goal: Camera Scanner (feat-011), reshaped by the owner into a live scan
+- Current status: Done. `/scan` captures each side as the user turns the cube in front of the rear camera, then opens `/enter?cube=<draft>` for checking and solving
 - Branch / commit: see `git log --oneline -1`
 
 ## Completed This Session
 
-- [x] `checkFacelets` (`src/lib/cube/validate.ts`): full legality (real pieces, each once, color counts, corner twist, edge flip, parity) with the stickers to mark and plain-language messages; works on part-filled drafts ("." = blank)
-- [x] `FaceletEditor` at `/enter`: face tabs, hold hint, big 3x3 face with neighbor color bars, palette with counts, status line, Clear face, Solve; draft mirrored into the URL
-- [x] `/tutor?cube=`: `lessonForCube` -> `rouxLessonFromState`; fix-it page for bad cubes; "Edit cube" link back to the editor; demo unchanged without `cube`
-- [x] Landing page links to `/enter`
+- [x] Docs: `docs/PRODUCT.md` section A rewritten (live, face-at-a-time scan; no OpenCV), `AGENTS.md` Vision row, feat-011 description
+- [x] `src/lib/scan/`: grid fit and color reading (`grid.ts`), steady/duplicate tracking (`tracker.ts`), colors + rotations to an editor draft (`assemble.ts`, `assignment.ts`), camera frame to snapshot (`frame.ts`)
+- [x] `CubeScanner` at `/scan`: camera view with guide and live grid, status, 6 side thumbnails (tap to redo), blocked/no-camera fallbacks to `/enter`
+- [x] Landing page links to `/scan` ("Scan your cube")
 
 ## Verification Evidence
 
 | Check | Command | Result | Notes |
 |---|---|---|---|
-| Full harness | `./init.sh` | Pass | 247/247 tests (32 new); `/enter`, `/tutor` partial prerender |
-| Legality | `validate.test.ts` | Pass | 550 random legal cubes match cubejs; every problem kind flagged |
-| Editor | `FaceletEditor.test.tsx` | Pass | paint, tabs/hints, early piece problems, ready -> Solve link, flip message, clear face, URL sync only after edits |
-| Handoff | `cubeLesson.test.ts` | Pass | demo without cube; entered demo cube = demo solve; errors link back to editor |
-| Browser | Playwright on `next start`, 390x844 / 375x667 / 320x568, light + dark | Pass | full cube tapped in, reload keeps draft, wrong sticker flagged, Solve -> 47-move lesson matching the entry, Edit cube returns, no console errors, no page scroll |
+| Full harness | `./init.sh` | Pass | 274/274 tests (27 new); `/scan` static |
+| Grid finder | `grid.test.ts` | Pass | offsets, sizes, tilt, stickerless, white plastic, glare, thumb, dim; rejects plain/gradient/noise; < 60ms per frame (~28ms measured) |
+| Assembly | `assemble.test.ts` | Pass | 60 random cubes exact under plain/dim/warm/cool light, mirror, solved; Hungarian vs brute force |
+| Tracker | `tracker.test.ts` | Pass | steady capture, no capture while moving, repeats in any rotation, 6 max, redo, red vs orange solved sides |
+| Screen | `CubeScanner.test.tsx` | Pass | rear camera asked, 6 sides -> `/enter?cube=<exact cube>`, camera stopped, redo, blocked + try again, no camera |
+| Browser | Playwright, `next start`, Chromium fake camera with generated videos | Pass | exact cube + "Ready to solve" at 390x844, 375x667 dark, 320x568; stickerless/warm/small variant too; no page scroll, no console errors |
 
 ## Files Changed
 
@@ -29,13 +30,14 @@
 
 ## Decisions Made
 
-- See "Decisions Made" in `progress.md` (server solve chosen by the owner, one face at a time, fixed standard centers, paint-only taps, early problem marking, draft in the URL)
+- See "Decisions Made" in `progress.md` (live scan instead of corner photos, no OpenCV, colors learned from the scan, hand-off through the editor)
 
 ## Blockers / Risks
 
-- `/tutor` is now a static shell plus per-request lesson (it reads `?cube=`); cheap, but no longer fully static
-- Fixed standard color scheme in the editor; the scanner must normalize orientation
-- Earlier risks still open (small-phone drawer scrolling, rare SB insert quirk): see `progress.md`
+- Not yet tried on a real phone with a real cube (the sandbox has no camera); thresholds in `grid.ts` may need tuning
+- Frame analysis on the main thread (~28ms here); move to a Web Worker if the view stutters on phones
+- `@techstark/opencv-js` is unused; remove it if nothing needs it
+- Earlier risks still open: see `progress.md`
 
 ## Next Session Startup
 
@@ -44,9 +46,10 @@
 3. Review this handoff.
 4. Run `./init.sh` before editing (the SessionStart hook puts Node 24 on PATH).
 5. Run `git fetch origin` and check for unmerged feature branches before picking a feature.
-6. If you run `next start` for browser checks, stop it before re-running `./init.sh`: a server left running from an older build serves 500s for the new chunks.
+6. If you run `next start` for browser checks, stop it before re-running `./init.sh` or rebuilding: a server left running from an older build serves 500s for the new chunks.
+7. Scanner browser checks: launch Chromium with `--use-fake-ui-for-media-stream --use-fake-device-for-media-stream --use-file-for-fake-video-capture=<file>.y4m` and grant `camera`; headless Chromium without these has no camera ("No camera available").
 
 ## Recommended Next Step
 
-- feat-011 Camera Scanner (unblocked): hand its guesses to `/enter?cube=<draft>` for correction
-- Or feat-015 Saved Scrambles and Learning Stats (unblocked); saving tutoring sessions from `/tutor` is still unwired
+- Owner: try `/scan` on a phone with a real cube and report misreads
+- feat-015 Saved Scrambles and Learning Stats (unblocked; the last open feature); saving tutoring sessions from `/tutor` is still unwired

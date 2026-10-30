@@ -2,8 +2,8 @@
 // Manual facelet entry: the user picks a color and taps stickers, one face at
 // a time, while the checker (validate.ts) marks impossible pieces as soon as
 // they show up. When the cube is complete and legal, "Solve this cube" opens
-// the tutor with it. The camera scanner (feat-011) will open this screen with
-// its guesses filled in, for the user to correct.
+// the tutor with it. The camera scanner (/scan) opens this screen with its
+// guesses filled in, for the user to correct.
 //
 // Centers are fixed: the user holds the cube with white on top and green in
 // front, and each face's hint says which way to turn it.
