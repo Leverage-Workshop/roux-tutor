@@ -13,7 +13,7 @@ export const viewport: Viewport = {
 };
 
 // `?cube=` holds a draft (54 letters, "." for blank stickers): the editor keeps
-// it up to date, and the scanner will open the editor with its guesses. The
+// it up to date, and the scanner (/scan) opens the editor with its guesses. The
 // blank editor is the static shell; a draft from the URL streams in.
 export default function EnterPage({ searchParams }: PageProps<"/enter">) {
   return (

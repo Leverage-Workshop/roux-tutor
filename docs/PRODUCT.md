@@ -3,7 +3,7 @@
 ## 1. Project Overview & Objectives
 **Roux Tutor** is a mobile-first, web-based interactive training application designed to teach users how to solve a Rubik's Cube using the **Roux Method**. Instead of relying on raw algorithmic optimizations that look random to a human, this application focuses on conceptual block-building and slice-turn intuition.
 
-The core loop allows a user to photograph their physical scrambled cube, instantly reconstruct its internal state in a web browser, and walk through a guided solve where every single move is explained by its tactical purpose.
+The core loop allows a user to scan their physical scrambled cube with the phone camera, instantly reconstruct its internal state in a web browser, and walk through a guided solve where every single move is explained by its tactical purpose.
 
 ## 2. Target Production Infrastructure & Reference
 * **Repository:** `https://github.com/Leverage-Workshop/roux-tutor.git`
@@ -23,15 +23,16 @@ The core loop allows a user to photograph their physical scrambled cube, instant
 * **Utilities:** `@react-three/drei` (Specifically leveraging `<OrbitControls>` built for mobile touch event abstraction)
 
 ### Vision & Logic Layer
-* **Computer Vision:** OpenCV.js (Client-side browser execution for color space sampling)
+* **Computer Vision:** Client-side frame analysis in plain TypeScript on small canvas snapshots of the camera video (grid fit and color sampling, `src/lib/scan/`). OpenCV.js was the original plan for perspective correction of corner photos; the live, face-at-a-time scan below does not need it
 * **State Logic Solver:** `cube.js` or equivalent mathematical matrix array mapped to a custom sub-stage step generator (FB, SB, CMLL, LSE).
 
 ## 4. Key Functional Requirements
 
-### A. Isometric State Extraction (The Scanner)
-* **Capture Mechanic:** Use a mobile web camera interface prompting exactly 2 or 3 isometric photos (capturing corner views that expose 3 sides simultaneously).
-* **Grid Calibration:** UI overlay displaying alignment templates. OpenCV.js corrects perspective distortion, isolates facelet matrices, and samples RGB/HSV vectors.
-* **Manual Calibration Fallback:** A mandatory interactive grid matrix UI allowing the user to override and tap-to-correct misidentified facelet colors before state validation.
+### A. Live State Extraction (The Scanner)
+* **Capture Mechanic:** A mobile web camera view (rear camera) with a square guide. The user holds the cube up and turns it freely, showing each of the six sides in any order. A side is captured automatically once it is held steady inside the guide; a progress row shows each captured side and lets the user tap one to scan it again. Showing a side that is already captured does nothing.
+* **Grid Detection:** Each analyzed frame fits a 3x3 grid inside the guide (position, size and a small tilt), rejects frames where the stickers are not uniform (mid-turn, hands in the way, no cube), and samples each sticker's color. Frame-to-frame 3D tracking of the cube is out of scope.
+* **Face Identity and Orientation:** The center sticker identifies each side (standard color scheme: white opposite yellow, green opposite blue, red opposite orange). The six centers, as seen under the user's lighting, are the color reference for every other sticker, and each color is used exactly 9 times. A single side does not show which way up it was held, so the scanner tries every rotation of every side and keeps the one that makes a legal cube; stickers it still cannot be sure of are left blank.
+* **Manual Calibration Fallback:** The scan opens the manual facelet editor with its guesses, where the user taps to correct misread colors before solving. The editor is also the fallback when there is no camera or access is denied.
 
 ### B. The Human-Teachable Roux Engine
 * **Solver Constraint:** The solving algorithm must not output Kociemba/two-phase shortest paths. It must parse operations strictly into Roux stages:

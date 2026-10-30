@@ -2,8 +2,8 @@
 
 ## Current State
 
-**Last Updated:** 2026-10-29
-**Active Feature:** feat-005 - Manual Facelet Entry (done)
+**Last Updated:** 2026-10-30
+**Active Feature:** feat-011 - Camera Scanner (done)
 
 ## Status
 
@@ -82,20 +82,31 @@
   - `FaceletEditor.tsx`: face tabs (mini previews, red dot when a face has a marked sticker), hold hint per face ("green facing you, white on top"), big 3x3 face with the neighboring centers' colors as edge bars, fixed centers, 6-color palette with "n left" counts, status line (first problem + count of others / stickers left / ready), Clear face, Solve this cube (link to `/tutor?cube=`). The draft is mirrored into `/enter?cube=` with `history.replaceState` after each edit
   - `/tutor?cube=<54 letters>`: `lessonForCube` (`src/lib/tutor/cubeLesson.ts`) solves it on the server with `rouxLessonFromState`; bad or illegal cubes get a "This cube can't be solved" page with the reason and "Fix it in the editor". No `cube` = the demo as before. `Lesson.start` (facelets) for entered cubes; TutorScreen starts from it and shows an "Edit cube" link
 
+- [x] feat-011 Camera Scanner at `/scan` (linked from `/` as "Scan your cube"): live scan, one side at a time, any order and any way up (owner's choice over the PRD's 2-3 corner photos; `docs/PRODUCT.md` updated)
+  - `src/lib/scan/grid.ts`: `findFace(snapshot)` on a 120x120 snapshot of the middle of the camera view. Fits a 3x3 grid (coarse search over position, size 70-112% of the guide, tilt +-14 deg, then two refining rounds), scoring uniform cells and lines that stand out from them (dark gaps or white plastic). Rejects frames with a non-uniform cell (median color must cover 60% of a cell's middle, 35% for the center, which may carry a logo), lines that don't stand out (smooth gradients, walls) or all-same cells with weak lines. Returns the outline and the 9 median colors (RGB + Lab)
+  - `src/lib/scan/tracker.ts`: `ScanTracker.push(read | null)`: a side is captured after 3 agreeing readings (~0.5s at one every 160ms), averaged; a side matching a captured one (center + stickers under any rotation) is "already"; 6 sides max; `remove(id)` to redo one
+  - `src/lib/scan/assemble.ts`: `assembleCube(sides)`: centers matched to colors jointly (720 orderings, nearest to the app's sticker colors), other stickers assigned with exactly 8 per color (Hungarian, `assignment.ts`) against colors learned from the scan (re-learned from all 9 stickers per color, up to 4 rounds), then every rotation of every side (and a mirror of all) tried: keep the most real pieces, then legal cubes; stickers that still differ between the best choices become "." (unsure)
+  - `src/lib/scan/frame.ts`: `readFrame(video, canvas)` (middle 84% of the view's square into the snapshot); `color.ts` (sRGB to Lab, distance with lightness at half weight)
+  - `src/components/scan/CubeScanner.tsx`: rear camera (`facingMode: environment`, 640x480), square view with guide brackets (white, amber while steadying, green on capture) and the found grid with the read colors, status line, 6 side thumbnails (tap to redo), vibrate on capture, "Enter colors by hand". When all 6 are in: stops the camera and opens `/enter?cube=<draft>`. Camera blocked: "Try again" + manual entry; no camera / unsupported: manual entry
+  - `src/lib/scan/testImages.ts`: draws fake snapshots (black-body, stickerless and white-plastic cubes, tilt, glare, thumb, noise) for tests
+
 ### What's In Progress
 
 - Nothing
 
 ### What's Next
 
-1. feat-011 Camera Scanner (unblocked): open `/enter?cube=<draft>` with the scanned guesses ("." for stickers it couldn't read) for the user to correct
-2. Optional: "New scramble" on `/tutor` (random cube to set up by hand): now cheap, since `/tutor?cube=` solves any cube on the server; needs a way to show the scramble moves
-3. Save tutoring sessions from `/tutor`: if signed in, call `startTutoringSession` when a solve loads, `saveTutoringProgress` on Next/Back (debounced), `completeTutoringSession` at the end
-4. Optional for the 3D view: a "reset view" button after orbiting, and swiping on the cube to turn layers (the PRD's "interactions on the cube trigger visual layer rotations"; not part of feat-004)
+1. Try the scanner on a real phone with a real cube (only synthetic images and a fake camera video were tested); tune `grid.ts` thresholds if needed
+2. feat-015 Saved Scrambles and Learning Stats (unblocked)
+3. Optional: "New scramble" on `/tutor` (random cube to set up by hand): now cheap, since `/tutor?cube=` solves any cube on the server; needs a way to show the scramble moves
+4. Save tutoring sessions from `/tutor`: if signed in, call `startTutoringSession` when a solve loads, `saveTutoringProgress` on Next/Back (debounced), `completeTutoringSession` at the end
+5. Optional for the 3D view: a "reset view" button after orbiting, and swiping on the cube to turn layers (the PRD's "interactions on the cube trigger visual layer rotations"; not part of feat-004)
 
 ## Blockers / Risks
 
-- [ ] OpenCV.js bundle is ~10MB: must be lazy-loaded only on the scanner route
+- [x] OpenCV.js bundle is ~10MB: not used (feat-011 scans in plain TypeScript). `@techstark/opencv-js` is still in `package.json`, unused; remove it if no later feature needs it
+- [ ] Scanner tested only on synthetic images and a generated fake-camera video (no real phone or cube in the sandbox). Real-world risks: red vs orange and white vs yellow under odd lighting (mitigated: colors learned from the scan's own centers, exactly 9 per color, and the editor marks impossible pieces), strong glare, stickerless cubes with very thin gaps (lines must stand out by 14/255 in luminance), a flat-colored thumb fully covering one sticker reads as a sticker. Non-standard color schemes (e.g. white opposite blue) can't be scanned or entered
+- [ ] Frame analysis runs on the main thread: ~28ms per frame on the dev container, so maybe 60-110ms on a mid-range phone. The loop waits for each frame, so slow phones just check fewer frames per second (capture takes a little longer). If the camera view stutters, move `findFace` to a Web Worker
 - [ ] Supabase free plan pauses a project after a week without activity; the Leverage Workshop org now uses both free project slots (Gekko, roux-tutor)
 - [x] Human-style Roux solver (FB/SB) is the hardest part; no off-the-shelf library does it. Both blocks done (feat-006, feat-007)
 - [x] After FB+SB the M-slice centers are usually turned (~75% of random cubes); CMLL recognizes from corners only, LSE fixes the centers (feat-009)
@@ -106,10 +117,15 @@
 - [ ] CMLL often starts on the layer SB ended on (13% of 1000 random cubes, e.g. SB's insert `... R'` then Sune's `R U R' ...`); a human would cancel those moves. Left as is: each case has one algorithm. If it bothers the owner, add mirrored/alternative algorithms per case and pick by the previous move
 - [x] Full facelet legality (each piece once, corner twist, edge flip, parity): `checkFacelets` in `validate.ts` (feat-005)
 - [ ] `/tutor` is no longer fully static (feat-005): it reads `?cube=`, so the page is a static shell ("Working out the solve…") plus the lesson streamed per request. The demo is solved once per server instance (cached in `demoLesson`), any other cube in a few ms (~0.3s on a cold server). Could add `"use cache"` around `lessonForCube` if traffic grows
-- [ ] Editor centers are fixed to the standard scheme (white top, green front). A cube with a different color scheme can't be entered; the scanner should normalize orientation before handing over
+- [x] Editor centers are fixed to the standard scheme (white top, green front). The scanner places each side by its center and works out its rotation, so it hands over a draft in that orientation (feat-011). Cubes with a different color scheme still can't be entered
 - [x] Fixed 2026-10-28: Claude's shell in the cloud container got Node 22 (`/opt/node22/bin` is on the default PATH and Claude's shell never reads `~/.bashrc`). `.claude/hooks/session-start.sh` (SessionStart hook, registered in `.claude/settings.json`) now writes `/opt/node24/bin` to the front of PATH via `$CLAUDE_ENV_FILE` and runs `npm install`. Takes effect for sessions that start from a branch containing the hook; no manual `export PATH` needed
 
 ## Decisions Made
+
+- **Live scan instead of 2-3 corner photos** (owner's choice, 2026-10-30): the user turns the cube in front of the camera and each side is captured once held steady inside a guide square. One flat side per capture reads more reliably than three foreshortened sides per photo; the centers say which side it is, and legality says which way up it was. Continuous 3D tracking of the cube while it turns was ruled out (hard, slow in a phone browser)
+- **No OpenCV.js**: the grid fit and color sampling run in plain TypeScript on a 120x120 snapshot (~28ms here), so phones don't download ~10MB of WASM. `docs/PRODUCT.md` and `AGENTS.md` updated
+- **Scanner colors come from the scan itself**: centers are matched to colors all at once (so the redder of two red-looking centers is red), then each color gets exactly 9 stickers, learned from the user's own lighting. Rotations are found by trying all 4^6 x 2 (mirror) and keeping legal cubes; leftover ambiguity is left blank for the editor
+- **Hand-off through the editor**: the scan always opens `/enter?cube=<draft>`, so the user checks it against the real cube and fixes misreads with the existing tools before solving
 
 - **Entered cubes are solved on the server** (owner's choice, 2026-10-29): `/tutor?cube=<54 letters>`, solved in the page's Server Component, so phones never download the solver (checked `.next/static`) and links survive refresh and sharing. Alternative was a lazy solver chunk in the browser, keeping `/tutor` static.
 - **Facelet editor shows one face at a time, large**: a full 6-face net at 390px gives ~28px stickers, too small for thumbs; one face gives ~95px stickers, and face tabs with mini previews still show the whole cube. Faces go Front, Right, Back, Left, Top, Bottom (turn the cube around, then tilt).
@@ -174,6 +190,8 @@
 
 ## Files Modified This Session
 
+- feat-011: `src/lib/scan/` (new: `color.ts`, `assignment.ts`, `grid.ts`, `tracker.ts`, `assemble.ts`, `frame.ts`, `testImages.ts`, tests `grid.test.ts`, `tracker.test.ts`, `assemble.test.ts`), `src/components/scan/CubeScanner.tsx`, `CubeScanner.test.tsx`, `src/app/scan/page.tsx` (new); `src/app/page.tsx`, `page.test.tsx` (link); `src/components/facelets/FaceletEditor.tsx`, `src/app/enter/page.tsx` (comments); `docs/PRODUCT.md`, `AGENTS.md` (scanner spec, no OpenCV); `feature_list.json`, `progress.md`, `session-handoff.md`
+
 - feat-005: `src/lib/cube/validate.ts`, `validate.test.ts`, `src/components/facelets/FaceletEditor.tsx`, `FaceletEditor.test.tsx`, `src/app/enter/page.tsx`, `src/lib/tutor/cubeLesson.ts`, `cubeLesson.test.ts` (new); `src/app/tutor/page.tsx`, `src/components/tutor/TutorScreen.tsx`, `src/lib/tutor/lesson.ts` (`start`), `rouxLesson.ts` (`rouxLessonFromState`), `src/lib/cube/model.ts` (comment), `src/app/page.tsx` (link); `feature_list.json`, `progress.md`, `session-handoff.md`
 
 - feat-010: `src/lib/tutor/explanations.ts`, `explanations.test.ts`, `rouxLesson.ts` (new); `demoLesson.ts`, `demoLesson.test.ts`, `lesson.ts`; `src/app/tutor/page.tsx`; `src/components/tutor/TutorDrawer.tsx`, `TutorScreen.test.tsx`; `src/app/globals.css` (`.scroll-shadows`); solver tests now use `DEMO_SCRAMBLE` (`firstBlock.test.ts`, `secondBlock.test.ts`, `roux.test.ts`); `feature_list.json`, `progress.md`, `session-handoff.md`
@@ -183,6 +201,9 @@
 - feat-006 (earlier): `src/lib/solver/pieces.ts`, `search.ts`, `firstBlock.ts` and tests
 
 ## Evidence of Completion
+
+- [x] feat-011: `./init.sh` passes on Node 24: npm ci, typecheck, lint, 274/274 tests (27 new), build (`/scan` static)
+- [x] feat-011: `findFace` reads 40 random sides off-center (+-10px), sized 74-108px of a 100px guide and tilted +-13 deg, plus stickerless and white-plastic cubes, glare, a thumb over part of a sticker, dim and noisy; rejects plain, textured, random-noise and gradient snapshots. `assembleCube` rebuilds 60 random cubes exactly (shuffled sides, random rotations, color jitter) under plain, dim, warm and cool light, a mirrored camera and the solved cube; 60 exact readings give exactly one legal cube; one misread sticker leaves the cube illegal with at most 3 stickers off. Playwright on `next start` with Chromium's fake camera playing generated videos (6 sides of the scramble `R U F' L2 D B' R2 U' F D2 L B`, 1.5s each with hand shake, smeared turns between, blur and noise; a second video with a stickerless cube, warm light, held smaller than the guide): at 390x844, 375x667 (dark), 320x568 both videos open `/enter?cube=` with the exact cube and "Ready to solve" in ~12s; no page scroll, no console errors; no camera shows "No camera available" with manual entry. Screenshots were kept outside the repo
 
 - [x] feat-005: `./init.sh` passes on Node 24: npm ci, typecheck, lint, 247/247 tests (32 new), build (`/enter`, `/tutor` partial prerender)
 - [x] feat-005: 550 random legal cubes (`Cube.random`) accepted, state equal to cubejs's; each problem kind produced and flagged by construction (twist, flip, parity, mirrored corner, repeated/opposite colors, duplicate piece, over-count, centers). Playwright on `next start` at 390x844, 375x667, 320x568, light and dark: no horizontal or page scroll; a scrambled cube tapped in sticker by sticker, status "Ready to solve", URL holds the draft and reload keeps it; one wrong sticker gives "There are 2 white-red edges ..." with the faces marked; Solve opens `/tutor?cube=...` with a 47-move lesson whose 3D cube matches the entry; "Edit cube" returns to the draft; illegal and nonsense `cube` values show the fix-it page; no console errors. Screenshots were kept outside the repo

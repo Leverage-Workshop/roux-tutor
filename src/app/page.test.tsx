@@ -28,4 +28,10 @@ describe("landing page", () => {
     const link = screen.getByRole("link", { name: "Try a demo solve" });
     expect(link.getAttribute("href")).toBe("/tutor");
   });
+
+  it("links to the scanner and the manual entry", () => {
+    render(<Home />);
+    expect(screen.getByRole("link", { name: "Scan your cube" }).getAttribute("href")).toBe("/scan");
+    expect(screen.getByRole("link", { name: "Enter your cube" }).getAttribute("href")).toBe("/enter");
+  });
 });
