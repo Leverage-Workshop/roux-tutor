@@ -3,7 +3,7 @@
 ## Current State
 
 **Last Updated:** 2026-10-31
-**Active Feature:** feat-015 - Saved Scrambles and Learning Stats (done). Every feature in `feature_list.json` is now done
+**Active Feature:** Continue unfinished solves (owner request after feat-015, done). Every feature in `feature_list.json` is done
 
 ## Status
 
@@ -101,17 +101,23 @@
   - `AuthButton`: signed-in name links to `/progress`; `compact` (tutor header) = "Sign in" or a round initial linking to `/progress`
   - `FaceletNet.tsx`: the flat net, split out of `CubeNet` so saved cubes can show a thumbnail
 
+- [x] Continue unfinished solves (owner request, 2026-10-31; follow-up to feat-015)
+  - `/progress`: unfinished sessions show **Continue** (`/tutor?session=<id>`); finished ones keep "Solve again"
+  - `src/lib/tutor/sessionLesson.ts`: `lessonForSession(row)` re-solves the saved cube; resumes only if unfinished and the moves still match, else a fresh session. `getTutoringSession` (uuid check, `maybeSingle`) in `tutoringSessions.ts`
+  - `/tutor?session=<id>`: `TutorForSession` reads the row with the server client (cookie, inside the existing Suspense); not found -> "Can't find this solve" with sign-in
+  - `createCubeStore(initial, moves, step)` / `<CubeStoreProvider step>` open part way; `SessionRecorder` `resume` option writes to the existing row; `TutorScreen` `resume` prop
+  - New sessions switch the address bar to `/tutor?session=<id>` (history.replaceState; checked: no server refetch), so a refresh continues instead of counting a second solve
+
 ### What's In Progress
 
 - Nothing
 
 ### What's Next
 
-1. Owner: sign in on the branch preview, step through a solve, bookmark a cube, then open `/progress` (from the initial at the top right) to see it. Only checked with a faked session so far
+1. Owner: sign in, step through part of a solve, bookmark a cube, open `/progress` (initial at the top right) and tap Continue. Only checked with a faked session so far
 2. Try the scanner on a real phone with a real cube (only synthetic images and a fake camera video were tested); tune `grid.ts` thresholds if needed
-3. Optional: "Continue" for unfinished sessions (open the tutor at `steps_completed` and keep updating the same row instead of starting a new one)
-4. Optional: "New scramble" on `/tutor` (random cube to set up by hand): cheap, since `/tutor?cube=` solves any cube on the server; needs a way to show the scramble moves
-5. Optional for the 3D view: a "reset view" button after orbiting, and swiping on the cube to turn layers (the PRD's "interactions on the cube trigger visual layer rotations"; not part of feat-004)
+3. Optional: "New scramble" on `/tutor` (random cube to set up by hand): cheap, since `/tutor?cube=` solves any cube on the server; needs a way to show the scramble moves
+4. Optional for the 3D view: a "reset view" button after orbiting, and swiping on the cube to turn layers (the PRD's "interactions on the cube trigger visual layer rotations"; not part of feat-004)
 
 ## Blockers / Risks
 
@@ -119,7 +125,8 @@
 - [ ] Scanner tested only on synthetic images and a generated fake-camera video (no real phone or cube in the sandbox). Real-world risks: red vs orange and white vs yellow under odd lighting (mitigated: colors learned from the scan's own centers, exactly 9 per color, and the editor marks impossible pieces), strong glare, stickerless cubes with very thin gaps (lines must stand out by 14/255 in luminance), a flat-colored thumb fully covering one sticker reads as a sticker. Non-standard color schemes (e.g. white opposite blue) can't be scanned or entered
 - [ ] Frame analysis runs on the main thread: ~28ms per frame on the dev container, so maybe 60-110ms on a mid-range phone. The loop waits for each frame, so slow phones just check fewer frames per second (capture takes a little longer). If the camera view stutters, move `findFace` to a Web Worker
 - [ ] feat-015 not yet tried with a real Google sign-in (the sandbox can't sign in); the server-side `/progress` read was only exercised signed out
-- [ ] feat-015: each `/tutor` page load is a new session, so a refresh mid-solve counts as a second solve started. Fix with a "Continue" flow if the owner minds
+- [x] feat-015: a refresh mid-solve used to count as a second solve; fixed by Continue (the URL switches to `/tutor?session=<id>`)
+- [ ] Continue re-solves the saved cube on the server and compares moves; if the solver changes in a later deploy, old unfinished sessions start over as new ones (by design, so the saved step still means the same move)
 - [ ] Supabase free plan pauses a project after a week without activity; the Leverage Workshop org now uses both free project slots (Gekko, roux-tutor)
 - [x] Human-style Roux solver (FB/SB) is the hardest part; no off-the-shelf library does it. Both blocks done (feat-006, feat-007)
 - [x] After FB+SB the M-slice centers are usually turned (~75% of random cubes); CMLL recognizes from corners only, LSE fixes the centers (feat-009)
@@ -221,6 +228,8 @@
 - feat-006 (earlier): `src/lib/solver/pieces.ts`, `search.ts`, `firstBlock.ts` and tests
 
 ## Evidence of Completion
+
+- [x] Continue: `./init.sh` passes (318/318 tests, 10 new: store start step, recorder resume, `getTutoringSession`, `lessonForSession` incl. the demo cube re-solving to the demo's moves, Continue link, tutor resuming at "Move 3 of 3" and completing the same row, URL switch). Playwright on `next start` (env vars set): `/tutor?session=<uuid>` and `?session=garbage` signed out show "Can't find this solve" + sign-in at 390 and 320 dark, no scroll; with a faked signed-in client the URL becomes `/tutor?session=<id>` after the first Next with 0 server requests for `/tutor` and no console errors
 
 - [x] feat-015: `./init.sh` passes on Node 24: npm ci, typecheck, lint, 308/308 tests (34 new), build (`/progress` partial prerender with the Supabase env vars, static without)
 - [x] feat-015: RLS checked live on project roux-tutor in rolled-back transactions (no data left behind): user A sees only their saved cube and their stats row (2 sessions -> started 2, finished 1, per stage 2/2/1/1); user B sees nothing; B inserting a saved cube for A fails 42501; B's delete/update of all rows touches 0; anon gets 42501 on `saved_scrambles` and `tutoring_stats`; `stage_ends` not ending at the move count, decreasing, or holding null is rejected. Security advisor: only the existing leaked-password notice (password sign-in not used); performance advisor clean

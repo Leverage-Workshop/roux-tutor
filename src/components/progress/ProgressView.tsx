@@ -120,8 +120,14 @@ export function sessionStatus(session: Pick<TutoringSession, "completed_at" | "s
   return stage ? `Working on ${stage.name}` : "Finished";
 }
 
+/** Unfinished solves can be continued where they stopped. */
+function canContinue(session: TutoringSession): boolean {
+  return session.completed_at === null && session.steps_completed < session.moves.length;
+}
+
 function SessionRow({ session }: { session: TutoringSession }) {
   const source = session.source as SessionSource;
+  const resumable = canContinue(session);
   return (
     <li className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
       <div className="flex min-w-0 flex-col">
@@ -131,12 +137,21 @@ function SessionRow({ session }: { session: TutoringSession }) {
           <LocalDate iso={session.started_at} />
         </span>
       </div>
-      <Link
-        href={tutorHref(session.start_facelets, source)}
-        className="flex min-h-11 shrink-0 items-center rounded-full border border-zinc-300 px-4 text-sm font-semibold dark:border-zinc-700"
-      >
-        Solve again
-      </Link>
+      {resumable ? (
+        <Link
+          href={`/tutor?session=${session.id}`}
+          className="flex min-h-11 shrink-0 items-center rounded-full bg-foreground px-4 text-sm font-semibold text-background"
+        >
+          Continue
+        </Link>
+      ) : (
+        <Link
+          href={tutorHref(session.start_facelets, source)}
+          className="flex min-h-11 shrink-0 items-center rounded-full border border-zinc-300 px-4 text-sm font-semibold dark:border-zinc-700"
+        >
+          Solve again
+        </Link>
+      )}
     </li>
   );
 }

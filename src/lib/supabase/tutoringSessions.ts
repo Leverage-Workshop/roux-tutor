@@ -53,6 +53,15 @@ export async function completeTutoringSession(supabase: Client, id: string, step
   if (error) throw error;
 }
 
+/** One of the current user's sessions, or null if there is no such row (or it isn't theirs). */
+export async function getTutoringSession(supabase: Client, id: string): Promise<TutoringSession | null> {
+  // Not a uuid: no row can match, and Postgres would reject the filter.
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
+  const { data, error } = await supabase.from("tutoring_sessions").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 /** The current user's sessions, newest first. */
 export async function listTutoringSessions(supabase: Client, limit = 20): Promise<TutoringSession[]> {
   const { data, error } = await supabase

@@ -7,6 +7,8 @@
 // - Progress saves are batched (one write per `delayMs` of activity), and
 //   `flush` sends a pending one right away (when the page is hidden or left).
 // - Reaching the last move marks the session finished right away.
+// - A continued solve (`resume`) writes to its existing row and counts only
+//   moves past the ones already saved.
 // - Writes go out one at a time, in order. If creating the row fails the
 //   recorder stops; a failed progress write is reported and the next one
 //   carries the latest count anyway.
@@ -19,6 +21,8 @@ export interface SessionWriter {
 }
 
 export interface RecorderOptions {
+  /** Continue an existing session instead of creating one. */
+  resume?: { id: string; stepsCompleted: number };
   delayMs?: number;
   onError?: (error: unknown) => void;
   setTimer?: (fn: () => void, ms: number) => unknown;
@@ -49,6 +53,10 @@ export class SessionRecorder {
     this.onError = options.onError ?? (() => {});
     this.setTimer = options.setTimer ?? ((fn, ms) => setTimeout(fn, ms));
     this.clearTimer = options.clearTimer ?? ((t) => clearTimeout(t as ReturnType<typeof setTimeout>));
+    if (options.resume) {
+      this.id = Promise.resolve(options.resume.id);
+      this.furthest = this.sent = Math.min(options.resume.stepsCompleted, total);
+    }
   }
 
   /** The user is now at move `stepIndex` (moves stepped through so far). */

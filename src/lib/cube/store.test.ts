@@ -21,6 +21,15 @@ describe("cube store", () => {
     expect(s.facelets).toBe(after("R U"));
   });
 
+  it("can start part way through a loaded move list", () => {
+    const s = createCubeStore(solvedState(), "R U F", 2).getState();
+    expect(s.stepIndex).toBe(2);
+    expect(s.facelets).toBe(after("R U"));
+    expect(s.lastTurn).toBeNull();
+    expect(createCubeStore(solvedState(), "R U", 9).getState().stepIndex).toBe(2);
+    expect(createCubeStore(solvedState(), "R U", -1).getState().stepIndex).toBe(0);
+  });
+
   it("steps through a loaded sequence with next and back", () => {
     const store = createCubeStore();
     store.getState().scramble("R U");

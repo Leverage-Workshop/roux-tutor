@@ -2,7 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import { SessionRecorder, type SessionWriter } from "./sessionRecorder";
 
 /** A writer that logs calls, plus a hand-run timer. */
-function setup(total = 10, start: () => Promise<string> = async () => "s1") {
+function setup(
+  total = 10,
+  start: () => Promise<string> = async () => "s1",
+  resume?: { id: string; stepsCompleted: number },
+) {
   const log: string[] = [];
   const writer: SessionWriter = {
     start: vi.fn(async () => {
@@ -19,6 +23,7 @@ function setup(total = 10, start: () => Promise<string> = async () => "s1") {
   let pending: (() => void) | null = null;
   const onError = vi.fn();
   const recorder = new SessionRecorder(writer, total, {
+    resume,
     onError,
     setTimer: (fn) => {
       pending = fn;
@@ -117,6 +122,20 @@ describe("SessionRecorder", () => {
     await recorder.settled();
     expect(log).toEqual(["start"]);
     expect(onError).toHaveBeenCalledWith(failure);
+  });
+
+  it("continues an existing session without creating one", async () => {
+    const { recorder, log, tick } = setup(10, undefined, { id: "old", stepsCompleted: 4 });
+    recorder.step(4);
+    recorder.step(3);
+    recorder.flush();
+    await recorder.settled();
+    expect(log).toEqual([]);
+    recorder.step(6);
+    tick();
+    recorder.step(10);
+    await recorder.settled();
+    expect(log).toEqual(["progress old 6", "complete old 10"]);
   });
 
   it("reports a failed save and keeps going", async () => {

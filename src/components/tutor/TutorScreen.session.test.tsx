@@ -19,7 +19,7 @@ function builder(table: string) {
   for (const method of ["insert", "upsert", "update", "delete", "select", "eq", "single", "maybeSingle"]) {
     b[method] = (...args: unknown[]) => {
       calls.push([table, method, ...args]);
-      if (method === "single") result = { data: { id: "session-1" }, error: null };
+      if (method === "single") result = { data: { id: "new-session" }, error: null };
       if (method === "maybeSingle") result = { data: alreadySaved ? { id: "c1" } : null, error: null };
       return b;
     };
@@ -40,6 +40,7 @@ const client = {
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => client }));
 
 beforeEach(() => {
+  window.history.replaceState(null, "", "/tutor");
   calls = [];
   alreadySaved = false;
   signedIn = true;
@@ -85,7 +86,21 @@ describe("TutorScreen saving", () => {
     await settle();
     const update = calls.find(([t, m]) => t === "tutoring_sessions" && m === "update");
     expect(update?.[2]).toMatchObject({ steps_completed: 3, completed_at: expect.any(String) });
-    expect(calls).toContainEqual(["tutoring_sessions", "eq", "id", "session-1"]);
+    expect(calls).toContainEqual(["tutoring_sessions", "eq", "id", "new-session"]);
+    // The address bar now points at the saved solve, so a refresh continues it.
+    expect(window.location.pathname + window.location.search).toBe("/tutor?session=new-session");
+  });
+
+  it("continues a saved solve at its move, writing to the same session", async () => {
+    render(<TutorScreen lesson={LESSON} resume={{ id: "old-session", stepsCompleted: 2 }} />);
+    await settle();
+    expect(screen.getByText("Move 3 of 3")).toBeDefined();
+    next();
+    await settle();
+    expect(calls.some(([t, m]) => t === "tutoring_sessions" && m === "insert")).toBe(false);
+    const update = calls.find(([t, m]) => t === "tutoring_sessions" && m === "update");
+    expect(update?.[2]).toMatchObject({ steps_completed: 3, completed_at: expect.any(String) });
+    expect(calls).toContainEqual(["tutoring_sessions", "eq", "id", "old-session"]);
   });
 
   it("saves the progress so far when the page is hidden", async () => {

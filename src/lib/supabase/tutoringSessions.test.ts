@@ -4,6 +4,7 @@ import { fakeClient } from "./fakeClient";
 import {
   EMPTY_STATS,
   completeTutoringSession,
+  getTutoringSession,
   getTutoringStats,
   listTutoringSessions,
   saveTutoringProgress,
@@ -51,6 +52,20 @@ describe("tutoring sessions", () => {
     expect(await listTutoringSessions(client, 5)).toBe(rows);
     expect(calls).toContainEqual(["order", ["started_at", { ascending: false }]]);
     expect(calls).toContainEqual(["limit", [5]]);
+  });
+
+  it("reads one session by id", async () => {
+    const id = "11111111-2222-3333-4444-555555555555";
+    const { client, calls } = fakeClient({ data: { id }, error: null });
+    expect(await getTutoringSession(client, id)).toEqual({ id });
+    expect(calls).toContainEqual(["eq", ["id", id]]);
+    expect(calls.at(-1)).toEqual(["maybeSingle", []]);
+  });
+
+  it("doesn't query for an id that isn't a uuid", async () => {
+    const { client, from } = fakeClient({ data: null, error: null });
+    expect(await getTutoringSession(client, "nope")).toBeNull();
+    expect(from).not.toHaveBeenCalled();
   });
 
   it("reads the stats view", async () => {

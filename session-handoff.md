@@ -43,7 +43,12 @@
 6. If you run `next start` for browser checks, stop it before re-running `./init.sh` or rebuilding. Stop it by PID: `pkill -f "next start"` also matches (and kills) the shell running it.
 7. Signed-in browser checks without Google: set a `sb-uhswyjnzypxpdomhlxdy-auth-token` cookie (`base64-` + base64url of a session JSON with a future `expires_at`) and route `https://uhswyjnzypxpdomhlxdy.supabase.co/rest/v1/**`. The browser client then acts signed in; the server rejects the fake token, so server-rendered pages stay signed out.
 
+## Follow-up: Continue unfinished solves (2026-10-31)
+
+- `/progress` shows Continue for unfinished solves -> `/tutor?session=<id>`, which opens at the saved move and keeps updating the same row; new solves switch the URL to that link so a refresh continues them
+- Verified: `./init.sh` (318 tests), Playwright signed-out not-found page and the URL switch without a reload. Details in `progress.md`
+
 ## Recommended Next Step
 
-- Owner: sign in on the preview, step through a solve, bookmark the cube, open `/progress`
+- Owner: sign in, step through part of a solve, bookmark the cube, open `/progress`, tap Continue
 - All features in `feature_list.json` are done; pick from "What's Next" in `progress.md` or add new features
