@@ -11,6 +11,7 @@ import { rgbCss } from "@/lib/scan/color";
 import { readFrame, GUIDE_IN_VIEW, SNAPSHOT_IN_VIEW } from "@/lib/scan/frame";
 import { SNAPSHOT_SIZE, type FaceRead, type Point } from "@/lib/scan/grid";
 import { ScanTracker, type CapturedSide, type TrackerEvent } from "@/lib/scan/tracker";
+import { editorHref } from "@/lib/tutor/links";
 
 /** Time between analyzed frames. */
 const FRAME_MS = 160;
@@ -35,7 +36,7 @@ export function CubeScanner() {
   const finish = useEffectEvent((all: CapturedSide[]) => {
     setDone(true);
     const { draft } = assembleCube(all.map((s) => s.lab));
-    router.push(`/enter?cube=${draft}`);
+    router.push(editorHref(draft, "scan"));
   });
 
   useEffect(() => {

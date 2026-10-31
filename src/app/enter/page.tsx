@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { FaceletEditor } from "@/components/facelets/FaceletEditor";
 import { EMPTY_DRAFT, parseDraft } from "@/lib/cube/validate";
+import { sourceFromParam } from "@/lib/tutor/links";
 
 export const metadata: Metadata = {
   title: "Enter your cube · Roux Tutor",
@@ -13,14 +14,15 @@ export const viewport: Viewport = {
 };
 
 // `?cube=` holds a draft (54 letters, "." for blank stickers): the editor keeps
-// it up to date, and the scanner (/scan) opens the editor with its guesses. The
+// it up to date, and the scanner (/scan) opens the editor with its guesses
+// (with `&from=scan`, passed on to the tutor so the solve is saved as a scan). The
 // blank editor is the static shell; a draft from the URL streams in.
 export default function EnterPage({ searchParams }: PageProps<"/enter">) {
   return (
     <Suspense fallback={<FaceletEditor initial={EMPTY_DRAFT} />}>
-      {searchParams.then(({ cube }) => {
+      {searchParams.then(({ cube, from }) => {
         const draft = parseDraft(typeof cube === "string" ? cube : undefined) ?? EMPTY_DRAFT;
-        return <FaceletEditor key={draft} initial={draft} />;
+        return <FaceletEditor key={draft} initial={draft} source={sourceFromParam(from)} />;
       })}
     </Suspense>
   );

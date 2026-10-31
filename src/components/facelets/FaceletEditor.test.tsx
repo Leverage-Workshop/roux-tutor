@@ -85,6 +85,14 @@ describe("FaceletEditor", () => {
     expect(screen.getByRole("link", { name: "Solve this cube" }).getAttribute("href")).toBe(`/tutor?cube=${CUBE}`);
   });
 
+  it("keeps a scanned cube marked as a scan in its links", () => {
+    render(<FaceletEditor initial={CUBE} source="scan" />);
+    expect(screen.getByRole("link", { name: "Solve this cube" }).getAttribute("href")).toBe(`/tutor?cube=${CUBE}&from=scan`);
+    pick("red");
+    tap(sticker(/^top left:/));
+    expect(replaceState.mock.calls.at(-1)?.[2]).toMatch(/^\/enter\?cube=[URFDLB.]{54}&from=scan$/);
+  });
+
   it("says why a complete cube can't be solved", () => {
     // Flip the front-right edge (facelets 23 and 12).
     const chars = [...CUBE];

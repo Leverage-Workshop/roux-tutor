@@ -1,7 +1,8 @@
 # Auth and Database
 
 Sign-in is optional. Anyone can use the tutor; signing in with Google saves
-the user's tutoring sessions.
+the user's tutoring sessions, lets them save cubes, and shows their progress
+at `/progress`.
 
 ## Supabase project
 
@@ -18,15 +19,25 @@ the user's tutoring sessions.
 
 Supabase clients: `src/lib/supabase/client.ts` (browser), `server.ts` (Server Components, Route Handlers), `proxy.ts` (session refresh). Each returns null when the env vars are missing, so the app still builds and runs with sign-in hidden.
 
-## Tables
+## Tables and views
 
-| Table | Purpose | RLS |
+| Name | Purpose | RLS / grants |
 |---|---|---|
-| `tutoring_sessions` | One row per guided solve: start facelets, source (`scan`/`manual`/`scramble`), move list, `steps_completed`, `started_at`, `updated_at`, `completed_at` | Signed-in users can select/insert/update/delete only rows where `user_id = auth.uid()`. `anon` has no access |
+| `tutoring_sessions` | One row per guided solve: start facelets, source (`scan`/`manual`/`scramble`), move list, `stage_ends` (`{fb, sb, cmll, lse}` move counts where each Roux stage ends; empty for older rows), `steps_completed` (furthest move reached), `started_at`, `updated_at`, `completed_at` | Signed-in users can select/insert/update/delete only rows where `user_id = auth.uid()`. `anon` has no access |
+| `saved_scrambles` | Cubes a user saved to solve again: `facelets`, `source`, `created_at`; unique per `(user_id, facelets)` | Select/insert/delete only own rows (no update). `anon` has no access |
+| `tutoring_stats` (view) | One row per user: `solves_started`, `solves_finished`, `staged_solves`, `fb_done`/`sb_done`/`cmll_done`/`lse_done` (sessions that got through each stage), `moves_stepped`, `last_active_at` | `security_invoker = true`, so `tutoring_sessions` RLS limits it to the caller's rows. Select only, `authenticated` only |
 
 - Migrations live in `supabase/migrations/` and were applied with the Supabase MCP `apply_migration` tool.
 - Regenerate `src/types/database.ts` after every migration.
-- Read/write helpers: `src/lib/supabase/tutoringSessions.ts` (`startTutoringSession`, `saveTutoringProgress`, `completeTutoringSession`, `listTutoringSessions`).
+- Supabase's default privileges grant `authenticated` everything on new tables and views: revoke what the app doesn't use (see `20261031121000_tighten_saved_scrambles_grants.sql`).
+- Read/write helpers: `src/lib/supabase/tutoringSessions.ts` (`startTutoringSession`, `saveTutoringProgress`, `completeTutoringSession`, `listTutoringSessions`, `getTutoringStats`) and `src/lib/supabase/savedScrambles.ts` (`saveScramble`, `unsaveScramble`, `deleteSavedScramble`, `isScrambleSaved`, `listSavedScrambles`).
+
+## What gets saved, and where it shows
+
+- `/tutor` records a session for signed-in users (`useTutoringRecorder` + `SessionRecorder`): the row is created on the first Next, progress (furthest move) is saved at most every 1.5s and when the page is hidden, and reaching the last move marks it finished. Each page load is a new session.
+- The bookmark in the `/tutor` header saves or removes the cube being solved.
+- `/progress` (linked from the signed-in name or initial) shows the stats, saved cubes (Solve / Remove) and the 10 latest sessions (Solve again).
+- A cube's source travels in links as `&from=scan` (scanner -> editor -> tutor); entered cubes are `manual`, the demo is `scramble`.
 
 ## One-time Google setup (done 2026-10-28)
 

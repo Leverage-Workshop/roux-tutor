@@ -86,3 +86,21 @@ export function createLesson(
     steps: stages.flatMap(({ stage, alg }) => toMoves(alg).map((move) => ({ move, stage }))),
   };
 }
+
+/**
+ * Where each Roux stage ends, as a count of moves from the start of the solve:
+ * `[fb, sb, cmll, lse]`, the last being the number of moves. A stage with no
+ * moves ends where the one before it does. Assumes steps are in stage order.
+ */
+export function stageEnds(steps: readonly Pick<TutorStep, "stage">[]): number[] {
+  return ROUX_STAGES.map((_, i) => steps.filter((s) => ROUX_STAGES.findIndex((r) => r.id === s.stage) <= i).length);
+}
+
+/**
+ * The stage the user is working on after stepping through `stepsCompleted`
+ * moves, or null when every stage is done.
+ */
+export function stageInProgress(ends: readonly number[], stepsCompleted: number): RouxStage | null {
+  const i = ends.findIndex((end) => stepsCompleted < end);
+  return i === -1 ? null : ROUX_STAGES[i];
+}

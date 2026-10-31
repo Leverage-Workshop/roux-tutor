@@ -15,13 +15,20 @@ export interface NewTutoringSession {
   source: SessionSource;
   /** The solve being taught. */
   moves: readonly Move[];
+  /** Where each Roux stage ends in `moves` (see `stageEnds` in lesson.ts). */
+  stageEnds: readonly number[];
 }
 
 /** Create a session row and return its id. */
 export async function startTutoringSession(supabase: Client, session: NewTutoringSession): Promise<string> {
   const { data, error } = await supabase
     .from("tutoring_sessions")
-    .insert({ start_facelets: session.startFacelets, source: session.source, moves: [...session.moves] })
+    .insert({
+      start_facelets: session.startFacelets,
+      source: session.source,
+      moves: [...session.moves],
+      stage_ends: [...session.stageEnds],
+    })
     .select("id")
     .single();
   if (error) throw error;
@@ -55,4 +62,40 @@ export async function listTutoringSessions(supabase: Client, limit = 20): Promis
     .limit(limit);
   if (error) throw error;
   return data;
+}
+
+/** Totals across all of the user's sessions (the tutoring_stats view). */
+export interface TutoringStats {
+  solvesStarted: number;
+  solvesFinished: number;
+  /** Sessions that recorded stage boundaries: the base for the per-stage counts. */
+  stagedSolves: number;
+  /** Sessions that got through each stage, in order FB, SB, CMLL, LSE. */
+  stagesDone: [number, number, number, number];
+  movesStepped: number;
+  lastActiveAt: string | null;
+}
+
+export const EMPTY_STATS: TutoringStats = {
+  solvesStarted: 0,
+  solvesFinished: 0,
+  stagedSolves: 0,
+  stagesDone: [0, 0, 0, 0],
+  movesStepped: 0,
+  lastActiveAt: null,
+};
+
+/** The current user's totals; all zeros before their first session. */
+export async function getTutoringStats(supabase: Client): Promise<TutoringStats> {
+  const { data, error } = await supabase.from("tutoring_stats").select("*").maybeSingle();
+  if (error) throw error;
+  if (!data) return EMPTY_STATS;
+  return {
+    solvesStarted: data.solves_started ?? 0,
+    solvesFinished: data.solves_finished ?? 0,
+    stagedSolves: data.staged_solves ?? 0,
+    stagesDone: [data.fb_done ?? 0, data.sb_done ?? 0, data.cmll_done ?? 0, data.lse_done ?? 0],
+    movesStepped: data.moves_stepped ?? 0,
+    lastActiveAt: data.last_active_at,
+  };
 }
