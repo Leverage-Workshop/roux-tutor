@@ -16,12 +16,37 @@ export type Database = {
   }
   public: {
     Tables: {
+      saved_scrambles: {
+        Row: {
+          created_at: string
+          facelets: string
+          id: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          facelets: string
+          id?: string
+          source?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          facelets?: string
+          id?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tutoring_sessions: {
         Row: {
           completed_at: string | null
           id: string
           moves: string[]
           source: string
+          stage_ends: number[]
           start_facelets: string
           started_at: string
           steps_completed: number
@@ -33,6 +58,7 @@ export type Database = {
           id?: string
           moves?: string[]
           source?: string
+          stage_ends?: number[]
           start_facelets: string
           started_at?: string
           steps_completed?: number
@@ -44,6 +70,7 @@ export type Database = {
           id?: string
           moves?: string[]
           source?: string
+          stage_ends?: number[]
           start_facelets?: string
           started_at?: string
           steps_completed?: number
@@ -54,7 +81,21 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      tutoring_stats: {
+        Row: {
+          cmll_done: number | null
+          fb_done: number | null
+          last_active_at: string | null
+          lse_done: number | null
+          moves_stepped: number | null
+          sb_done: number | null
+          solves_finished: number | null
+          solves_started: number | null
+          staged_solves: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never

@@ -45,14 +45,29 @@ describe("AuthButton", () => {
     });
   });
 
-  it("shows the user's name and signs out", async () => {
+  it("shows the user's name, linking to their progress, and signs out", async () => {
     render(<AuthButton />);
     emit({ user: { email: "a@example.com", user_metadata: { full_name: "Ada Lovelace" } } });
-    expect(screen.getByText("Ada Lovelace")).toBeDefined();
+    expect(screen.getByRole("link", { name: "Ada Lovelace" }).getAttribute("href")).toBe("/progress");
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
     });
     expect(auth.signOut).toHaveBeenCalled();
     expect(refresh).toHaveBeenCalled();
+  });
+
+  it("compact: a short sign-in button when signed out", () => {
+    render(<AuthButton compact />);
+    emit(null);
+    expect(screen.getByRole("button", { name: "Sign in with Google" }).textContent).toBe("Sign in");
+  });
+
+  it("compact: the user's initial, linking to their progress", () => {
+    render(<AuthButton compact />);
+    emit({ user: { email: "a@example.com", user_metadata: { full_name: "ada Lovelace" } } });
+    const link = screen.getByRole("link", { name: "Your progress (ada Lovelace)" });
+    expect(link.textContent).toBe("A");
+    expect(link.getAttribute("href")).toBe("/progress");
+    expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
   });
 });

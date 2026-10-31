@@ -117,8 +117,8 @@
       "name": "Saved Scrambles and Learning Stats",
       "description": "Signed-in users can save scrambles and see stats from their tutoring sessions (solves started/finished, progress per Roux stage). New tables or views get RLS limiting rows to their owner",
       "dependencies": ["feat-012"],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "2026-10-31: migrations 20261031120000_saved_scrambles_and_stats.sql (saved_scrambles table, tutoring_sessions.stage_ends, tutoring_stats view with security_invoker) and 20261031121000_tighten_saved_scrambles_grants.sql applied to project roux-tutor; types regenerated. RLS checked live in rolled-back transactions: a user sees only their own saved cubes and stats; inserting a saved cube as another user fails with 42501; deleting/updating another user's rows touches 0 rows; anon gets 42501 on the table and the view; bad stage_ends rejected by the check constraint. Security advisor: no new findings (only the existing leaked-password notice, not used: Google-only sign-in); performance advisor clean. /tutor now records sessions for signed-in users (created on first Next, furthest move saved every 1.5s and on pagehide, finished at the last move) and has a bookmark to save the cube; /progress shows solves started/finished, solves through each Roux stage, saved cubes (Solve/Remove) and recent solves. ./init.sh passed (typecheck, lint, 308/308 tests incl. 34 new, build; /progress is partial-prerendered with env vars, static without). Browser (Playwright, next start, fake session cookie + intercepted REST): bookmark check/save, session insert and progress PATCH sent with the right paths; tutor header fits at 390x844, 375x667 dark, 320x568 with no horizontal scroll or console errors; progress view checked with sample data at 390 light and 320 dark. Not yet checked with a real Google sign-in."
     }
   ]
 }

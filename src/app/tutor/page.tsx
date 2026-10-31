@@ -3,6 +3,8 @@ import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { TutorScreen } from "@/components/tutor/TutorScreen";
 import { lessonForCube } from "@/lib/tutor/cubeLesson";
+import { sourceFromParam } from "@/lib/tutor/links";
+import type { SessionSource } from "@/lib/supabase/tutoringSessions";
 
 export const metadata: Metadata = {
   title: "Tutor · Roux Tutor",
@@ -17,23 +19,24 @@ export const viewport: Viewport = {
 // A Server Component: the solve (and its explanations) is worked out on the
 // server and only the finished lesson is sent to the browser, so the solver
 // never ships to phones. `/tutor?cube=<54 facelet letters>` solves a cube from
-// the facelet editor; without it the page plays the demo scramble.
+// the facelet editor (`&from=scan` when it was scanned); without it the page
+// plays the demo scramble.
 export default function TutorPage({ searchParams }: PageProps<"/tutor">) {
   return (
     <Suspense fallback={<SolvingScreen />}>
-      {searchParams.then(({ cube }) => (
-        <TutorForCube cube={cube} />
+      {searchParams.then(({ cube, from }) => (
+        <TutorForCube cube={cube} source={sourceFromParam(from)} />
       ))}
     </Suspense>
   );
 }
 
-function TutorForCube({ cube }: { cube: string | string[] | undefined }) {
+function TutorForCube({ cube, source }: { cube: string | string[] | undefined; source?: SessionSource }) {
   const result = lessonForCube(cube);
   if ("error" in result) {
     return <Message title="This cube can't be solved" text={result.error} editHref={result.editHref} />;
   }
-  return <TutorScreen key={result.lesson.start ?? "demo"} lesson={result.lesson} />;
+  return <TutorScreen key={result.lesson.start ?? "demo"} lesson={result.lesson} source={source} />;
 }
 
 // The static shell, shown while the server works out the solve (a few

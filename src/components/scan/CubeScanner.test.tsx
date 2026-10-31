@@ -101,7 +101,7 @@ describe("CubeScanner", () => {
     expect(push).not.toHaveBeenCalled();
     await holdSide(SIDES[5]);
     expect(status()).toBe("All 6 sides scanned. Opening them for you to check…");
-    expect(push).toHaveBeenCalledWith(`/enter?cube=${CUBE}`);
+    expect(push).toHaveBeenCalledWith(`/enter?cube=${CUBE}&from=scan`);
     expect(stop).toHaveBeenCalled();
   });
 

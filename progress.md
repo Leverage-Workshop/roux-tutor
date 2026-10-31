@@ -2,8 +2,8 @@
 
 ## Current State
 
-**Last Updated:** 2026-10-30
-**Active Feature:** feat-011 - Camera Scanner (done)
+**Last Updated:** 2026-10-31
+**Active Feature:** feat-015 - Saved Scrambles and Learning Stats (done). Every feature in `feature_list.json` is now done
 
 ## Status
 
@@ -90,16 +90,27 @@
   - `src/components/scan/CubeScanner.tsx`: rear camera (`facingMode: environment`, 640x480), square view with guide brackets (white, amber while steadying, green on capture) and the found grid with the read colors, status line, 6 side thumbnails (tap to redo), vibrate on capture, "Enter colors by hand". When all 6 are in: stops the camera and opens `/enter?cube=<draft>`. Camera blocked: "Try again" + manual entry; no camera / unsupported: manual entry
   - `src/lib/scan/testImages.ts`: draws fake snapshots (black-body, stickerless and white-plastic cubes, tilt, glare, thumb, noise) for tests
 
+- [x] feat-015 Saved Scrambles and Learning Stats (see `docs/AUTH.md`, "Tables and views" and "What gets saved")
+  - Migrations `20261031120000_saved_scrambles_and_stats.sql` (`saved_scrambles` table, `tutoring_sessions.stage_ends`, `tutoring_stats` view with `security_invoker`) and `20261031121000_tighten_saved_scrambles_grants.sql`; `src/types/database.ts` regenerated
+  - `src/lib/tutor/sessionRecorder.ts`: `SessionRecorder` (pure): row created on the first step forward, furthest move saved at most every 1.5s (`flush` sends now), finished at the last move, writes queued in order, stops if the insert fails
+  - `src/components/tutor/useTutoringRecorder.ts`: runs the recorder off the cube store for signed-in users; flushes on `pagehide`, hidden tab and unmount. `TutorScreen` builds the session once (`startFacelets`, `source`, `moves`, `stageEnds`)
+  - `SaveCubeButton.tsx`: bookmark in the `/tutor` header (signed in only), saves/removes the starting cube, `aria-pressed`
+  - `src/lib/supabase/savedScrambles.ts` (save = upsert ignoring duplicates, unsave by facelets, delete by id, is-saved, list); `tutoringSessions.ts` takes `stageEnds`, adds `getTutoringStats` / `EMPTY_STATS`; `useSupabaseUser.ts` (client + user, shared by AuthButton, bookmark, recorder); `fakeClient.ts` test helper
+  - `lesson.ts`: `stageEnds(steps)`, `stageInProgress(ends, steps)`; `links.ts`: `tutorHref`, `editorHref`, `sourceFromParam` (`&from=scan` carried scanner -> editor -> tutor)
+  - `/progress` (`src/app/progress/page.tsx`): static header + title, data streamed behind Suspense (server client, `getClaims`); not configured / signed out / load error get a short note. `ProgressView` (totals, per-stage bars, recent 10 sessions with "Solve again"), `SavedCubes` (preview, Solve, Remove), `LocalDate` (viewer's time zone after hydration)
+  - `AuthButton`: signed-in name links to `/progress`; `compact` (tutor header) = "Sign in" or a round initial linking to `/progress`
+  - `FaceletNet.tsx`: the flat net, split out of `CubeNet` so saved cubes can show a thumbnail
+
 ### What's In Progress
 
 - Nothing
 
 ### What's Next
 
-1. Try the scanner on a real phone with a real cube (only synthetic images and a fake camera video were tested); tune `grid.ts` thresholds if needed
-2. feat-015 Saved Scrambles and Learning Stats (unblocked)
-3. Optional: "New scramble" on `/tutor` (random cube to set up by hand): now cheap, since `/tutor?cube=` solves any cube on the server; needs a way to show the scramble moves
-4. Save tutoring sessions from `/tutor`: if signed in, call `startTutoringSession` when a solve loads, `saveTutoringProgress` on Next/Back (debounced), `completeTutoringSession` at the end
+1. Owner: sign in on the branch preview, step through a solve, bookmark a cube, then open `/progress` (from the initial at the top right) to see it. Only checked with a faked session so far
+2. Try the scanner on a real phone with a real cube (only synthetic images and a fake camera video were tested); tune `grid.ts` thresholds if needed
+3. Optional: "Continue" for unfinished sessions (open the tutor at `steps_completed` and keep updating the same row instead of starting a new one)
+4. Optional: "New scramble" on `/tutor` (random cube to set up by hand): cheap, since `/tutor?cube=` solves any cube on the server; needs a way to show the scramble moves
 5. Optional for the 3D view: a "reset view" button after orbiting, and swiping on the cube to turn layers (the PRD's "interactions on the cube trigger visual layer rotations"; not part of feat-004)
 
 ## Blockers / Risks
@@ -107,6 +118,8 @@
 - [x] OpenCV.js bundle is ~10MB: not used (feat-011 scans in plain TypeScript). `@techstark/opencv-js` is still in `package.json`, unused; remove it if no later feature needs it
 - [ ] Scanner tested only on synthetic images and a generated fake-camera video (no real phone or cube in the sandbox). Real-world risks: red vs orange and white vs yellow under odd lighting (mitigated: colors learned from the scan's own centers, exactly 9 per color, and the editor marks impossible pieces), strong glare, stickerless cubes with very thin gaps (lines must stand out by 14/255 in luminance), a flat-colored thumb fully covering one sticker reads as a sticker. Non-standard color schemes (e.g. white opposite blue) can't be scanned or entered
 - [ ] Frame analysis runs on the main thread: ~28ms per frame on the dev container, so maybe 60-110ms on a mid-range phone. The loop waits for each frame, so slow phones just check fewer frames per second (capture takes a little longer). If the camera view stutters, move `findFace` to a Web Worker
+- [ ] feat-015 not yet tried with a real Google sign-in (the sandbox can't sign in); the server-side `/progress` read was only exercised signed out
+- [ ] feat-015: each `/tutor` page load is a new session, so a refresh mid-solve counts as a second solve started. Fix with a "Continue" flow if the owner minds
 - [ ] Supabase free plan pauses a project after a week without activity; the Leverage Workshop org now uses both free project slots (Gekko, roux-tutor)
 - [x] Human-style Roux solver (FB/SB) is the hardest part; no off-the-shelf library does it. Both blocks done (feat-006, feat-007)
 - [x] After FB+SB the M-slice centers are usually turned (~75% of random cubes); CMLL recognizes from corners only, LSE fixes the centers (feat-009)
@@ -121,6 +134,11 @@
 - [x] Fixed 2026-10-28: Claude's shell in the cloud container got Node 22 (`/opt/node22/bin` is on the default PATH and Claude's shell never reads `~/.bashrc`). `.claude/hooks/session-start.sh` (SessionStart hook, registered in `.claude/settings.json`) now writes `/opt/node24/bin` to the front of PATH via `$CLAUDE_ENV_FILE` and runs `npm install`. Takes effect for sessions that start from a branch containing the hook; no manual `export PATH` needed
 
 ## Decisions Made
+
+- **feat-015: stats from a view, not a table**: `tutoring_stats` aggregates `tutoring_sessions` with `security_invoker = true`, so the table's RLS applies and there is nothing to keep in sync. Per-stage progress needs stage boundaries, so sessions now store `stage_ends`; "got through a stage" = `steps_completed >= stage_ends[i]`
+- **feat-015: a session starts on the first Next, progress is the furthest move**: opening `/tutor` and leaving isn't a solve started; stepping back doesn't lower progress. Each page load is a new session (no resume yet)
+- **feat-015: saved cubes are starting positions** (facelets), unique per user, so the bookmark is a toggle and saving twice is harmless. The demo saves as `scramble`
+- **feat-015: progress page reads on the server** (cookie session, behind Suspense with a static shell); writes from the browser client with RLS doing the checks
 
 - **Live scan instead of 2-3 corner photos** (owner's choice, 2026-10-30): the user turns the cube in front of the camera and each side is captured once held steady inside a guide square. One flat side per capture reads more reliably than three foreshortened sides per photo; the centers say which side it is, and legality says which way up it was. Continuous 3D tracking of the cube while it turns was ruled out (hard, slow in a phone browser)
 - **No OpenCV.js**: the grid fit and color sampling run in plain TypeScript on a 120x120 snapshot (~28ms here), so phones don't download ~10MB of WASM. `docs/PRODUCT.md` and `AGENTS.md` updated
@@ -190,6 +208,8 @@
 
 ## Files Modified This Session
 
+- feat-015: `supabase/migrations/20261031120000_saved_scrambles_and_stats.sql`, `20261031121000_tighten_saved_scrambles_grants.sql` (new); `src/types/database.ts`; `src/lib/supabase/savedScrambles.ts`, `savedScrambles.test.ts`, `useSupabaseUser.ts`, `fakeClient.ts` (new), `tutoringSessions.ts`, `tutoringSessions.test.ts`; `src/lib/tutor/sessionRecorder.ts`, `sessionRecorder.test.ts`, `links.ts`, `links.test.ts`, `lesson.test.ts` (new), `lesson.ts`; `src/app/progress/page.tsx`, `src/components/progress/` (new: `ProgressView.tsx`, `ProgressView.test.tsx`, `SavedCubes.tsx`, `LocalDate.tsx`, `labels.ts`); `src/components/FaceletNet.tsx`, `src/components/tutor/SaveCubeButton.tsx`, `useTutoringRecorder.ts`, `TutorScreen.session.test.tsx` (new); `TutorScreen.tsx`, `CubeNet.tsx`, `AuthButton.tsx`, `AuthButton.test.tsx`; `src/app/tutor/page.tsx`, `src/app/enter/page.tsx`, `FaceletEditor.tsx`, `FaceletEditor.test.tsx`, `CubeScanner.tsx`, `CubeScanner.test.tsx` (`&from=scan`); `docs/AUTH.md`, `feature_list.json`, `progress.md`, `session-handoff.md`
+
 - feat-011: `src/lib/scan/` (new: `color.ts`, `assignment.ts`, `grid.ts`, `tracker.ts`, `assemble.ts`, `frame.ts`, `testImages.ts`, tests `grid.test.ts`, `tracker.test.ts`, `assemble.test.ts`), `src/components/scan/CubeScanner.tsx`, `CubeScanner.test.tsx`, `src/app/scan/page.tsx` (new); `src/app/page.tsx`, `page.test.tsx` (link); `src/components/facelets/FaceletEditor.tsx`, `src/app/enter/page.tsx` (comments); `docs/PRODUCT.md`, `AGENTS.md` (scanner spec, no OpenCV); `feature_list.json`, `progress.md`, `session-handoff.md`
 
 - feat-005: `src/lib/cube/validate.ts`, `validate.test.ts`, `src/components/facelets/FaceletEditor.tsx`, `FaceletEditor.test.tsx`, `src/app/enter/page.tsx`, `src/lib/tutor/cubeLesson.ts`, `cubeLesson.test.ts` (new); `src/app/tutor/page.tsx`, `src/components/tutor/TutorScreen.tsx`, `src/lib/tutor/lesson.ts` (`start`), `rouxLesson.ts` (`rouxLessonFromState`), `src/lib/cube/model.ts` (comment), `src/app/page.tsx` (link); `feature_list.json`, `progress.md`, `session-handoff.md`
@@ -201,6 +221,10 @@
 - feat-006 (earlier): `src/lib/solver/pieces.ts`, `search.ts`, `firstBlock.ts` and tests
 
 ## Evidence of Completion
+
+- [x] feat-015: `./init.sh` passes on Node 24: npm ci, typecheck, lint, 308/308 tests (34 new), build (`/progress` partial prerender with the Supabase env vars, static without)
+- [x] feat-015: RLS checked live on project roux-tutor in rolled-back transactions (no data left behind): user A sees only their saved cube and their stats row (2 sessions -> started 2, finished 1, per stage 2/2/1/1); user B sees nothing; B inserting a saved cube for A fails 42501; B's delete/update of all rows touches 0; anon gets 42501 on `saved_scrambles` and `tutoring_stats`; `stage_ends` not ending at the move count, decreasing, or holding null is rejected. Security advisor: only the existing leaked-password notice (password sign-in not used); performance advisor clean
+- [x] feat-015: Playwright on `next start` with a fake session cookie and intercepted Supabase REST calls: `/tutor` checks `saved_scrambles?facelets=eq...`, the bookmark upserts (`on_conflict=user_id,facelets`) and turns pressed, Next creates the session (`POST tutoring_sessions`) and progress is `PATCH`ed; header (title, bookmark, initial) fits at 390x844, 375x667 dark, 320x568, no horizontal scroll, no console errors. `ProgressView` with sample data at 390 light and 320 dark: no horizontal scroll. Screenshots kept outside the repo
 
 - [x] feat-011: `./init.sh` passes on Node 24: npm ci, typecheck, lint, 274/274 tests (27 new), build (`/scan` static)
 - [x] feat-011: `findFace` reads 40 random sides off-center (+-10px), sized 74-108px of a 100px guide and tilted +-13 deg, plus stickerless and white-plastic cubes, glare, a thumb over part of a sticker, dim and noisy; rejects plain, textured, random-noise and gradient snapshots. `assembleCube` rebuilds 60 random cubes exactly (shuffled sides, random rotations, color jitter) under plain, dim, warm and cool light, a mirrored camera and the solved cube; 60 exact readings give exactly one legal cube; one misread sticker leaves the cube illegal with at most 3 stickers off. Playwright on `next start` with Chromium's fake camera playing generated videos (6 sides of the scramble `R U F' L2 D B' R2 U' F D2 L B`, 1.5s each with hand shake, smeared turns between, blur and noise; a second video with a stickerless cube, warm light, held smaller than the guide): at 390x844, 375x667 (dark), 320x568 both videos open `/enter?cube=` with the exact cube and "Ready to solve" in ~12s; no page scroll, no console errors; no camera shows "No camera available" with manual entry. Screenshots were kept outside the repo
