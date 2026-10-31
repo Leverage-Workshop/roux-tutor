@@ -9,17 +9,22 @@ import { createCubeStore, type CubeStore, type CubeStoreApi } from "./store";
 
 const CubeStoreContext = createContext<CubeStoreApi | null>(null);
 
-/** `initial` and `moves` only seed the store on first render; later changes are ignored. */
+/**
+ * `initial`, `moves` and `step` (moves already applied, for a continued solve)
+ * only seed the store on first render; later changes are ignored.
+ */
 export function CubeStoreProvider({
   initial,
   moves,
+  step,
   children,
 }: {
   initial?: CubeState;
   moves?: string | readonly Move[];
+  step?: number;
   children: ReactNode;
 }) {
-  const [store] = useState(() => createCubeStore(initial, moves));
+  const [store] = useState(() => createCubeStore(initial, moves, step));
   return <CubeStoreContext value={store}>{children}</CubeStoreContext>;
 }
 

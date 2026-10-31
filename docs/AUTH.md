@@ -34,9 +34,10 @@ Supabase clients: `src/lib/supabase/client.ts` (browser), `server.ts` (Server Co
 
 ## What gets saved, and where it shows
 
-- `/tutor` records a session for signed-in users (`useTutoringRecorder` + `SessionRecorder`): the row is created on the first Next, progress (furthest move) is saved at most every 1.5s and when the page is hidden, and reaching the last move marks it finished. Each page load is a new session.
+- `/tutor` records a session for signed-in users (`useTutoringRecorder` + `SessionRecorder`): the row is created on the first Next, progress (furthest move) is saved at most every 1.5s and when the page is hidden, and reaching the last move marks it finished. Once the row exists the address bar switches to `/tutor?session=<id>`, so a refresh continues the same row.
+- `/tutor?session=<id>` continues a saved solve: the server reads the row (RLS: owner only), solves its starting cube again (`lessonForSession`), and if the moves still match and it isn't finished, opens at `steps_completed` and keeps writing to that row. A finished solve, or one whose moves no longer match the solver, starts over as a new session. No row (signed out, another account, bad id): "Can't find this solve" with a sign-in button.
 - The bookmark in the `/tutor` header saves or removes the cube being solved.
-- `/progress` (linked from the signed-in name or initial) shows the stats, saved cubes (Solve / Remove) and the 10 latest sessions (Solve again).
+- `/progress` (linked from the signed-in name or initial) shows the stats, saved cubes (Solve / Remove) and the 10 latest sessions (Continue for unfinished ones, Solve again for finished ones).
 - A cube's source travels in links as `&from=scan` (scanner -> editor -> tutor); entered cubes are `manual`, the demo is `scramble`.
 
 ## One-time Google setup (done 2026-10-28)

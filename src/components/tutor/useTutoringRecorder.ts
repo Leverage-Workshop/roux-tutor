@@ -2,6 +2,10 @@
 // Saves the solve on screen as a tutoring session while a signed-in user steps
 // through it (see SessionRecorder for when rows are written). Does nothing when
 // signed out or when Supabase is not configured.
+//
+// Once a new session's row exists, the address bar switches to
+// /tutor?session=<id>, so a refresh or a return visit continues that row
+// instead of counting a second solve.
 import { useEffect } from "react";
 import { useCubeStoreApi } from "@/lib/cube/CubeStoreProvider";
 import { useSupabaseUser } from "@/lib/supabase/useSupabaseUser";
@@ -13,8 +17,14 @@ import {
 } from "@/lib/supabase/tutoringSessions";
 import { SessionRecorder } from "@/lib/tutor/sessionRecorder";
 
-/** `session` must keep the same identity for the life of the screen. */
-export function useTutoringRecorder(session: NewTutoringSession): void {
+/** An unfinished saved session to keep writing to. */
+export interface TutoringResume {
+  id: string;
+  stepsCompleted: number;
+}
+
+/** `session` and `resume` must keep the same identity for the life of the screen. */
+export function useTutoringRecorder(session: NewTutoringSession, resume?: TutoringResume): void {
   const { supabase, user } = useSupabaseUser();
   const userId = user?.id;
   const store = useCubeStoreApi();
@@ -23,12 +33,16 @@ export function useTutoringRecorder(session: NewTutoringSession): void {
     if (!supabase || !userId || session.moves.length === 0) return;
     const recorder = new SessionRecorder(
       {
-        start: () => startTutoringSession(supabase, session),
+        start: async () => {
+          const id = await startTutoringSession(supabase, session);
+          window.history.replaceState(null, "", `/tutor?session=${id}`);
+          return id;
+        },
         progress: (id, steps) => saveTutoringProgress(supabase, id, steps),
         complete: (id, steps) => completeTutoringSession(supabase, id, steps),
       },
       session.moves.length,
-      { onError: (error) => console.warn("Couldn't save the tutoring session", error) },
+      { resume, onError: (error) => console.warn("Couldn't save the tutoring session", error) },
     );
     // Moves stepped through before sign-in finished loading still count.
     recorder.step(store.getState().stepIndex);
@@ -45,5 +59,5 @@ export function useTutoringRecorder(session: NewTutoringSession): void {
       window.removeEventListener("pagehide", flush);
       flush();
     };
-  }, [supabase, userId, session, store]);
+  }, [supabase, userId, session, resume, store]);
 }

@@ -1,10 +1,13 @@
 import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import { AuthButton } from "@/components/AuthButton";
 import { TutorScreen } from "@/components/tutor/TutorScreen";
+import { createClient } from "@/lib/supabase/server";
+import { getTutoringSession, type SessionSource } from "@/lib/supabase/tutoringSessions";
 import { lessonForCube } from "@/lib/tutor/cubeLesson";
 import { sourceFromParam } from "@/lib/tutor/links";
-import type { SessionSource } from "@/lib/supabase/tutoringSessions";
+import { lessonForSession } from "@/lib/tutor/sessionLesson";
 
 export const metadata: Metadata = {
   title: "Tutor · Roux Tutor",
@@ -20,14 +23,44 @@ export const viewport: Viewport = {
 // server and only the finished lesson is sent to the browser, so the solver
 // never ships to phones. `/tutor?cube=<54 facelet letters>` solves a cube from
 // the facelet editor (`&from=scan` when it was scanned); without it the page
-// plays the demo scramble.
+// plays the demo scramble. `/tutor?session=<id>` continues one of the
+// signed-in user's saved solves (the tutor switches to this link once a solve
+// is saved, so a refresh continues it too).
 export default function TutorPage({ searchParams }: PageProps<"/tutor">) {
   return (
     <Suspense fallback={<SolvingScreen />}>
-      {searchParams.then(({ cube, from }) => (
-        <TutorForCube cube={cube} source={sourceFromParam(from)} />
-      ))}
+      {searchParams.then(({ cube, from, session }) =>
+        typeof session === "string" ? (
+          <TutorForSession id={session} />
+        ) : (
+          <TutorForCube cube={cube} source={sourceFromParam(from)} />
+        ),
+      )}
     </Suspense>
+  );
+}
+
+// Reads the session cookie, so only this branch is per-user.
+async function TutorForSession({ id }: { id: string }) {
+  const supabase = await createClient();
+  const row = supabase ? await getTutoringSession(supabase, id).catch(() => null) : null;
+  const result = row && lessonForSession(row);
+  if (!result) {
+    return (
+      <Message
+        title="Can't find this solve"
+        text="Saved solves open only for the account that made them. Sign in with that Google account (top right), or start a new solve."
+        signIn
+      />
+    );
+  }
+  return (
+    <TutorScreen
+      key={result.resume?.id ?? result.lesson.start}
+      lesson={result.lesson}
+      source={result.source}
+      resume={result.resume}
+    />
   );
 }
 
@@ -52,22 +85,37 @@ function SolvingScreen() {
   );
 }
 
-function Message({ title, text, editHref }: { title: string; text: string; editHref: string }) {
+function Message({
+  title,
+  text,
+  editHref,
+  signIn = false,
+}: {
+  title: string;
+  text: string;
+  /** Offer the facelet editor with this draft. */
+  editHref?: string;
+  /** Show the sign-in button in the header. */
+  signIn?: boolean;
+}) {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 px-6 pt-2 pb-8">
-      <header className="flex min-h-14 items-center">
-        <Link href="/" className="flex min-h-11 items-center font-semibold">
+      <header className="flex min-h-14 items-center justify-between gap-3">
+        <Link href="/" className="flex min-h-11 shrink-0 items-center font-semibold">
           Roux Tutor
         </Link>
+        {signIn && <AuthButton />}
       </header>
       <h1 className="text-2xl font-bold">{title}</h1>
       <p className="text-zinc-700 dark:text-zinc-300">{text}</p>
-      <Link
-        href={editHref}
-        className="flex min-h-12 items-center justify-center rounded-full bg-foreground px-6 font-semibold text-background"
-      >
-        Fix it in the editor
-      </Link>
+      {editHref && (
+        <Link
+          href={editHref}
+          className="flex min-h-12 items-center justify-center rounded-full bg-foreground px-6 font-semibold text-background"
+        >
+          Fix it in the editor
+        </Link>
+      )}
       <Link href="/tutor" className="flex min-h-12 items-center justify-center rounded-full border border-zinc-300 px-6 font-semibold dark:border-zinc-700">
         Watch the demo solve
       </Link>

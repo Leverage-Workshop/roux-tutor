@@ -2,7 +2,8 @@
 // Tutor viewport: cube view in the top 60% of the screen, persistent drawer in
 // the bottom 40%. Both read the same cube store. For signed-in users the solve
 // is saved as a tutoring session as they step through it, and the header's
-// bookmark saves the cube.
+// bookmark saves the cube. A continued solve (`resume`) opens at its saved
+// move and keeps writing to the same session.
 import { useState } from "react";
 import Link from "next/link";
 import { AuthButton } from "@/components/AuthButton";
@@ -14,13 +15,21 @@ import { editorHref } from "@/lib/tutor/links";
 import { CubeView } from "./CubeView";
 import { SaveCubeButton } from "./SaveCubeButton";
 import { TutorDrawer } from "./TutorDrawer";
-import { useTutoringRecorder } from "./useTutoringRecorder";
+import { useTutoringRecorder, type TutoringResume } from "./useTutoringRecorder";
 
 /**
  * `source` says where an entered cube came from (a scan); it defaults to
  * `manual` for entered cubes and `scramble` for the demo.
  */
-export function TutorScreen({ lesson, source }: { lesson: Lesson; source?: SessionSource }) {
+export function TutorScreen({
+  lesson,
+  source,
+  resume,
+}: {
+  lesson: Lesson;
+  source?: SessionSource;
+  resume?: TutoringResume;
+}) {
   const [start] = useState(() =>
     lesson.start ? fromFacelets(lesson.start) : applyMoves(solvedState(), lesson.scramble),
   );
@@ -30,9 +39,11 @@ export function TutorScreen({ lesson, source }: { lesson: Lesson; source?: Sessi
     moves: lesson.steps.map((s) => s.move),
     stageEnds: stageEnds(lesson.steps),
   }));
+  // Fixed on first render, like `session` (the recorder must not restart).
+  const [resumeAt] = useState(resume);
   return (
-    <CubeStoreProvider initial={start} moves={session.moves}>
-      <RecordSession session={session} />
+    <CubeStoreProvider initial={start} moves={session.moves} step={resumeAt?.stepsCompleted}>
+      <RecordSession session={session} resume={resumeAt} />
       <main className="relative h-dvh overflow-hidden">
         <section aria-label="Cube" className="flex h-[60dvh] flex-col">
           <header className="flex min-h-14 items-center justify-between gap-2 px-4 pt-2">
@@ -62,7 +73,7 @@ export function TutorScreen({ lesson, source }: { lesson: Lesson; source?: Sessi
   );
 }
 
-function RecordSession({ session }: { session: NewTutoringSession }) {
-  useTutoringRecorder(session);
+function RecordSession({ session, resume }: { session: NewTutoringSession; resume?: TutoringResume }) {
+  useTutoringRecorder(session, resume);
   return null;
 }

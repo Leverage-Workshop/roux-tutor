@@ -85,9 +85,10 @@ describe("ProgressView", () => {
       />,
     );
     const rows = within(screen.getByRole("heading", { name: "Recent solves" }).parentElement!).getAllByRole("listitem");
-    expect(rows[0].textContent).toMatch(/^Working on Second Block12 of 40 moves · Scanned · Oct 30, 2026Solve again$/);
-    expect(within(rows[0]).getByRole("link").getAttribute("href")).toBe(`/tutor?cube=${SOLVED_FACELETS}&from=scan`);
+    expect(rows[0].textContent).toMatch(/^Working on Second Block12 of 40 moves · Scanned · Oct 30, 2026Continue$/);
+    expect(within(rows[0]).getByRole("link").getAttribute("href")).toBe("/tutor?session=a");
     expect(rows[1].textContent).toContain("Finished40 of 40 moves · Demo scramble");
+    expect(within(rows[1]).getByRole("link").textContent).toBe("Solve again");
     expect(within(rows[1]).getByRole("link").getAttribute("href")).toBe(`/tutor?cube=${SOLVED_FACELETS}`);
   });
 
