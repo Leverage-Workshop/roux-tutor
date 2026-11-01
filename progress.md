@@ -2,12 +2,14 @@
 
 ## Current State
 
-**Last Updated:** 2026-10-31
-**Active Feature:** Continue unfinished solves (owner request after feat-015, done). Every feature in `feature_list.json` is done
+**Last Updated:** 2026-11-01
+**Active Feature:** Scanner fix (owner's first real-phone scan captured the first side three times). Every feature in `feature_list.json` is done
 
 ## Status
 
 ### What's Done
+
+- [x] 2026-11-01 scanner over-capture fix (`src/lib/scan/tracker.ts`): first real scan counted one side as three. Causes: `sameSide` needed centers within 12 (a 20% exposure change moves red ~12), and any blurry/null frame cleared the "just captured" lock. Now: center limit 18 (red/orange stay 23+ apart), sticker match removes the uniform lighting shift and ignores the worst sticker, and the lock follows the held side frame to frame until a different side is held steady. 3 new tests (fail on old code); ./init.sh passed, 321/321 tests. Still needs a re-check on a real phone
 
 - [x] Installed `harness-creator` skill (`.claude/skills/harness-creator`, pinned in `skills-lock.json`)
 - [x] Created harness: `AGENTS.md` (imported by `CLAUDE.md`), `feature_list.json`, `progress.md`, `session-handoff.md`, `init.sh`

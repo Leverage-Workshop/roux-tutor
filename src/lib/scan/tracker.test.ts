@@ -5,8 +5,11 @@ import type { FaceRead } from "./grid";
 import { CAMERA_RGB } from "./testImages";
 import { STEADY_READINGS, ScanTracker, sameSide } from "./tracker";
 
-function reading(side: readonly Face[], wobble = 0): FaceRead {
-  const rgb = side.map((f, i) => CAMERA_RGB[f].map((v) => Math.min(255, v + ((i * 7 + wobble) % 5) - 2)) as unknown as Rgb);
+/** A side as the camera reads it; `light` scales brightness, like auto exposure does. */
+function reading(side: readonly Face[], wobble = 0, light = 1): FaceRead {
+  const rgb = side.map(
+    (f, i) => CAMERA_RGB[f].map((v) => Math.min(255, v * light + ((i * 7 + wobble) % 5) - 2)) as unknown as Rgb,
+  );
   const p = { x: 0, y: 0 };
   return { corners: [p, p, p, p], rgb, lab: rgb.map(rgbToLab), contrast: 80 };
 }
@@ -75,5 +78,48 @@ describe("ScanTracker", () => {
     const orange = reading(Array(9).fill("L")).lab;
     expect(sameSide(red, orange)).toBe(false);
     expect(sameSide(red, reading(Array(9).fill("R"), 3).lab)).toBe(true);
+  });
+
+  it("captures a side once, even with blurry frames and the exposure drifting", () => {
+    const tracker = new ScanTracker();
+    hold(tracker, SIDES[1]);
+    // The camera keeps adjusting and the hand shakes: the same side, steadily darker.
+    for (let k = 0; k < 40; k++) {
+      const event = k % 5 === 4 ? tracker.push(null) : tracker.push(reading(SIDES[1], k, 1 - k * 0.01));
+      expect(event.kind).not.toBe("captured");
+    }
+    expect(tracker.sides).toHaveLength(1);
+    // Then a different side is captured right away.
+    expect(hold(tracker, SIDES[2]).at(-1)!.kind).toBe("captured");
+  });
+
+  it("knows a side shown again in dimmer or brighter light, or with glare on one sticker", () => {
+    const tracker = new ScanTracker();
+    hold(tracker, SIDES[3]);
+    tracker.push(null);
+    hold(tracker, SIDES[4]);
+    tracker.push(null);
+    const id = tracker.sides[0].id;
+    for (const light of [0.8, 1.15]) {
+      const again = [0, 1, 2].map((k) => tracker.push(reading(turned(SIDES[3]), k, light)));
+      expect(again.at(-1)).toEqual({ kind: "already", id });
+      tracker.push(null);
+    }
+    const glare = reading(SIDES[3]);
+    glare.lab[2] = rgbToLab([250, 250, 250]);
+    expect(sameSide(tracker.sides[0].lab, glare.lab)).toBe(true);
+    expect(tracker.sides.map((s) => s.id)).toEqual([id, id + 1]);
+  });
+
+  it("keeps different sides apart in any light", () => {
+    for (const light of [0.6, 0.8, 1, 1.15]) {
+      for (let a = 0; a < 6; a++) {
+        for (let b = 0; b < 6; b++) {
+          if (a !== b) expect(sameSide(reading(SIDES[a]).lab, reading(SIDES[b], 2, light).lab)).toBe(false);
+        }
+      }
+      const solved = (f: Face) => reading(Array(9).fill(f), 0, light).lab;
+      expect(sameSide(solved("R"), solved("L"))).toBe(false);
+    }
   });
 });
