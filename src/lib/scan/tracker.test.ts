@@ -42,7 +42,7 @@ describe("ScanTracker", () => {
     expect(tracker.push(null)).toEqual({ kind: "searching" });
   });
 
-  it("knows a side it already has, however it is turned", () => {
+  it("keeps holding the side it just captured, however it is turned", () => {
     const tracker = new ScanTracker();
     hold(tracker, SIDES[2]);
     tracker.push(null);
@@ -58,8 +58,39 @@ describe("ScanTracker", () => {
       tracker.push(null);
     }
     expect(tracker.sides).toHaveLength(6);
-    const extra: Face[] = ["U", "U", "U", "U", "D", "U", "U", "U", "U"];
-    expect(hold(tracker, extra).at(-1)).toEqual({ kind: "full" });
+    // Every center color is in, so another side replaces the one with its center.
+    const extra: Face[] = ["D", "D", "D", "D", "U", "D", "D", "D", "D"];
+    const last = hold(tracker, extra).at(-1)!;
+    expect(last.kind === "captured" && last.replaced).toBe(true);
+    expect(tracker.sides).toHaveLength(6);
+  });
+
+  it("replaces a scanned side with a new side of the same center color, in its place", () => {
+    const tracker = new ScanTracker();
+    // A bad read of red's side: its center is red, its other stickers wrong.
+    const misread = SIDES[1].map((f, i) => (i === 4 ? f : SIDES[4][i]));
+    hold(tracker, misread);
+    tracker.push(null);
+    hold(tracker, SIDES[2]);
+    tracker.push(null);
+    const [first, second] = tracker.sides;
+    const fixed = hold(tracker, SIDES[1]).at(-1)!;
+    expect(fixed).toMatchObject({ kind: "captured", replaced: true, side: { id: first.id } });
+    expect(tracker.sides.map((s) => s.id)).toEqual([first.id, second.id]);
+    expect(sameSide(tracker.sides[0].lab, reading(SIDES[1]).lab)).toBe(true);
+    // Still held there, it is not replaced again.
+    expect(tracker.push(reading(SIDES[1], 7))).toEqual({ kind: "already", id: first.id });
+  });
+
+  it("refreshes a side when it is shown again after another one", () => {
+    const tracker = new ScanTracker();
+    hold(tracker, SIDES[0]);
+    tracker.push(null);
+    hold(tracker, SIDES[5]);
+    tracker.push(null);
+    const again = hold(tracker, turned(SIDES[0])).at(-1)!;
+    expect(again).toMatchObject({ kind: "captured", replaced: true, side: { id: tracker.sides[0].id } });
+    expect(tracker.sides).toHaveLength(2);
   });
 
   it("can forget a side and capture it again", () => {
@@ -94,21 +125,21 @@ describe("ScanTracker", () => {
   });
 
   it("knows a side shown again in dimmer or brighter light, or with glare on one sticker", () => {
-    const tracker = new ScanTracker();
-    hold(tracker, SIDES[3]);
-    tracker.push(null);
-    hold(tracker, SIDES[4]);
-    tracker.push(null);
-    const id = tracker.sides[0].id;
     for (const light of [0.8, 1.15]) {
-      const again = [0, 1, 2].map((k) => tracker.push(reading(turned(SIDES[3]), k, light)));
-      expect(again.at(-1)).toEqual({ kind: "already", id });
+      const tracker = new ScanTracker();
+      hold(tracker, SIDES[3]);
       tracker.push(null);
+      hold(tracker, SIDES[4]);
+      tracker.push(null);
+      const [id] = tracker.sides.map((s) => s.id);
+      expect(sameSide(tracker.sides[0].lab, reading(turned(SIDES[3]), 1, light).lab)).toBe(true);
+      const again = [0, 1, 2].map((k) => tracker.push(reading(turned(SIDES[3]), k, light)));
+      expect(again.at(-1)).toMatchObject({ kind: "captured", replaced: true, side: { id } });
+      expect(tracker.sides).toHaveLength(2);
     }
     const glare = reading(SIDES[3]);
     glare.lab[2] = rgbToLab([250, 250, 250]);
-    expect(sameSide(tracker.sides[0].lab, glare.lab)).toBe(true);
-    expect(tracker.sides.map((s) => s.id)).toEqual([id, id + 1]);
+    expect(sameSide(reading(SIDES[3], 4).lab, glare.lab)).toBe(true);
   });
 
   it("keeps different sides apart in any light", () => {

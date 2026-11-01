@@ -10,6 +10,7 @@
 ### What's Done
 
 - [x] 2026-11-01 scanner over-capture fix (`src/lib/scan/tracker.ts`): first real scan counted one side as three. Causes: `sameSide` needed centers within 12 (a 20% exposure change moves red ~12), and any blurry/null frame cleared the "just captured" lock. Now: center limit 18 (red/orange stay 23+ apart), sticker match removes the uniform lighting shift and ignores the worst sticker, and the lock follows the held side frame to frame until a different side is held steady. 3 new tests (fail on old code); ./init.sh passed, 321/321 tests. Still needs a re-check on a real phone
+- [x] 2026-11-01 scanner replaces instead of piling up (owner request): a cube has one side per center color, so a newly held side whose center matches a scanned one replaces that scan in its slot ("Updated side n."), fixing bad reads and making duplicates impossible. The just-captured side is still not re-captured while it stays held. 4 new tests; ./init.sh passed, 324/324
 
 - [x] Installed `harness-creator` skill (`.claude/skills/harness-creator`, pinned in `skills-lock.json`)
 - [x] Created harness: `AGENTS.md` (imported by `CLAUDE.md`), `feature_list.json`, `progress.md`, `session-handoff.md`, `init.sh`
