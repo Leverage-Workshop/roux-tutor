@@ -31,6 +31,8 @@ export function CubeScanner() {
   const [event, setEvent] = useState<TrackerEvent>({ kind: "searching" });
   /** The side captured during the current steady view, so it reads "Got it", not "already". */
   const [latest, setLatest] = useState<number | null>(null);
+  /** Whether that capture replaced an earlier scan of the same side. */
+  const [replaced, setReplaced] = useState(false);
   const [done, setDone] = useState(false);
 
   const finish = useEffectEvent((all: CapturedSide[]) => {
@@ -57,6 +59,7 @@ export function CubeScanner() {
       if (next.kind === "captured") {
         navigator.vibrate?.(30);
         setLatest(next.side.id);
+        setReplaced(next.replaced);
         const all = [...tracker.sides];
         setSides(all);
         if (all.length === 6) {
@@ -122,7 +125,9 @@ export function CubeScanner() {
       : event.kind === "captured" || (event.kind === "already" && event.id === latest)
         ? sides.length === 6
           ? "Got all 6 sides!"
-          : `Got it! ${sides.length} of 6. Turn the cube to show another side.`
+          : replaced
+            ? `Updated side ${sides.findIndex((s) => s.id === latest) + 1}. Turn the cube to show another side.`
+            : `Got it! ${sides.length} of 6. Turn the cube to show another side.`
         : already !== null
           ? "You already scanned this side. Show another one."
           : event.kind === "steadying"
@@ -225,7 +230,7 @@ export function CubeScanner() {
             })}
           </ol>
           <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
-            Show the sides in any order, any way up. Tap a scanned side to redo it.
+            Any order, any way up. To redo a side, show it again or tap it.
           </p>
 
           <div className="mt-auto">

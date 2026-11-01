@@ -116,6 +116,23 @@ describe("CubeScanner", () => {
     expect(status()).toBe("Got it! 1 of 6. Turn the cube to show another side.");
   });
 
+  it("replaces a scanned side when a side with the same center is shown", async () => {
+    mockCamera("ok");
+    render(<CubeScanner />);
+    await frame();
+    // A bad read of side 3's center color, then side 4, then the real side 3.
+    const misread = SIDES[5].map((f, i) => (i === 4 ? SIDES[2][4] : f));
+    await holdSide(misread);
+    await holdSide(SIDES[3]);
+    await holdSide(SIDES[2]);
+    expect(status()).toBe("Updated side 1. Turn the cube to show another side.");
+    expect(screen.getAllByRole("button", { name: /scanned\. Tap to scan it again/ })).toHaveLength(2);
+    // Still held there, it keeps saying so.
+    frames.push(reading(SIDES[2]));
+    await frame();
+    expect(status()).toBe("Updated side 1. Turn the cube to show another side.");
+  });
+
   it("explains a blocked camera and offers to try again or enter by hand", async () => {
     const getUserMedia = mockCamera("denied");
     render(<CubeScanner />);
