@@ -2,7 +2,7 @@ import Cube from "cubejs";
 import { describe, expect, it } from "vitest";
 import { applyMoves, fromFacelets, solvedState, toFacelets } from "@/lib/cube/model";
 import { DEMO_HELD_SCRAMBLE, DEMO_SCRAMBLE } from "./demoLesson";
-import { HOLD, holdColors, holdRotation, solverView } from "./hold";
+import { HOLD, holdCentersStraight, holdColors, holdRotation, solverView } from "./hold";
 import { rouxLessonFromState, rouxLesson } from "./rouxLesson";
 
 const COLOR_LETTER = { white: "U", red: "R", green: "F", yellow: "D", orange: "L", blue: "B" } as const;
@@ -37,6 +37,15 @@ describe("hold", () => {
     // The demo scrambles are the same cube: one as entered, one as held.
     const held = applyMoves(solvedState(), [...DEMO_SCRAMBLE.split(" "), "x2", "y"].join(" "));
     expect(toFacelets(solverView(held))).toBe(toFacelets(applyMoves(solvedState(), DEMO_HELD_SCRAMBLE)));
+  });
+
+  it("tells when the middle slice has turned the centers", () => {
+    expect(holdCentersStraight(HELD_SOLVED)).toBe(true);
+    for (const alg of ["M", "M2", "r", "r'"]) {
+      expect(holdCentersStraight(toFacelets(applyMoves(solvedState(), `x2 y ${alg}`))), alg).toBe(false);
+    }
+    // Other turns, and the slice turned back, leave them straight.
+    expect(holdCentersStraight(toFacelets(applyMoves(solvedState(), "x2 y R U L' F D B2 M M'")))).toBe(true);
   });
 
   it("translates color names to the held cube", () => {
@@ -76,5 +85,21 @@ describe("held lessons", () => {
     expect(text).toContain("blue against the blue center");
     expect(text).toContain("white on the bottom like the left block");
     expect(text).not.toMatch(/orange center|yellow bottom/);
+  });
+
+  it("say so on the first move that turns the middle centers, and only there", () => {
+    const note = /also turns the middle centers, so white leaves the bottom/;
+    for (const lesson of [rouxLesson(DEMO_SCRAMBLE), ...[0, 1, 2].map(() => rouxLessonFromState(fromFacelets(Cube.random().asString())))]) {
+      let cube = applyMoves(solvedState(), [...lesson.scramble, ...lesson.hold!]);
+      if (lesson.start) cube = applyMoves(fromFacelets(lesson.start), lesson.hold!);
+      const first = lesson.steps.findIndex((step) => {
+        cube = applyMoves(cube, [step.move]);
+        return !holdCentersStraight(toFacelets(cube));
+      });
+      expect(first).toBeGreaterThan(-1);
+      expect("Mr").toContain(lesson.steps[first].move[0]);
+      expect(lesson.steps.filter((s) => note.test(s.explanation!))).toEqual([lesson.steps[first]]);
+      expect(lesson.steps[first].explanation).toContain(`${lesson.steps[first].move} also turns`);
+    }
   });
 });

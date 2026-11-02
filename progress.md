@@ -3,12 +3,13 @@
 ## Current State
 
 **Last Updated:** 2026-11-02
-**Active Feature:** feat-016 fixed hold (red front, white bottom) and Reset view (owner request). Every feature in `feature_list.json` is done
+**Active Feature:** feat-016 follow-up: hold hint follows the middle slice (owner request). Every feature in `feature_list.json` is done
 
 ## Status
 
 ### What's Done
 
+- [x] 2026-11-02 feat-016 follow-up (owner: after an M, white is no longer the bottom): expected in Roux. Only M and r move centers; the left/right centers never move. `HoldHint` now reads the store (`holdCentersStraight`): "Red front / White bottom" while the middle slice is straight, "Blue left / Green right" + "Blocks: white side down" once it turns. `rouxLesson` adds `centersTurnedNote` to the first move that turns the centers. ./init.sh passed, 341/341
 - [x] 2026-11-02 feat-016 (owner request: tutorials keep the cube still, e.g. red front, blue left, green right, white down): lessons now hold the cube that way for the whole solve. `src/lib/tutor/hold.ts` finds the rotation to the hold (`Lesson.hold`, x2 y for entered cubes), relabels the held cube so the unchanged solver sees its usual frame, and translates color words in the solver's text. The tutor store starts from the held cube; the first block is now blue-white on the left. Hint "Red front / White bottom" and a Reset view button (0.5 s swing back to the starting angle, instant with reduced motion) sit in a row under the cube. `DEMO_SCRAMBLE` is now the white-top scramble of the same demo cube; solver tests use `DEMO_HELD_SCRAMBLE`. ./init.sh passed, 336/336. Unfinished sessions saved before this re-solve to different moves and start over
 - [x] 2026-11-01 scanner over-capture fix (`src/lib/scan/tracker.ts`): first real scan counted one side as three. Causes: `sameSide` needed centers within 12 (a 20% exposure change moves red ~12), and any blurry/null frame cleared the "just captured" lock. Now: center limit 18 (red/orange stay 23+ apart), sticker match removes the uniform lighting shift and ignores the worst sticker, and the lock follows the held side frame to frame until a different side is held steady. 3 new tests (fail on old code); ./init.sh passed, 321/321 tests. Still needs a re-check on a real phone
 - [x] 2026-11-02 stricter scan (owner report: close, but colors too loose and a side sometimes captured twice before the cube could be turned). `findFace` now rejects a side unless every sticker is a cube color: clearly colored (Lab chroma 24+; real colors keep 27+ at 40% brightness) or white (colorless, L 45+, and no more than 12 below the side's brightest colored sticker, since white is the brightest color). The tracker no longer captures again while the held side, or one with its center color (the same side at an angle mid-turn), stays in view; steady readings must agree more closely (mean 7, max 16, was 9/22). 2 new tests; ./init.sh passed, 338/338

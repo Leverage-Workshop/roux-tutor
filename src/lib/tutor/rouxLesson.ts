@@ -5,7 +5,8 @@
 // The solve is played with the cube held the tutor's way (red in front, white
 // on the bottom, see hold.ts): the lesson's `hold` rotation turns the start
 // there, the solver's moves are relative to it and its text names the colors
-// as they sit on the held cube.
+// as they sit on the held cube. The first move that turns the middle centers
+// (white leaves the bottom) says that this is expected.
 //
 // Solving takes ~300ms the first time (the solver builds its lookup tables)
 // and a few milliseconds after that, so pages build their lesson on the
@@ -14,7 +15,7 @@ import { applyMoves, solvedState, toFacelets, type CubeState } from "@/lib/cube/
 import { toMoves, type Move } from "@/lib/cube/notation";
 import { solveRoux } from "@/lib/solver/roux";
 import { explainRouxSolution } from "./explanations";
-import { holdColors, holdRotation, solverView } from "./hold";
+import { centersTurnedNote, holdColors, holdRotation, solverView } from "./hold";
 import type { Lesson, LessonPhase, TutorStep } from "./lesson";
 
 /** The lesson for a scrambled cube. */
@@ -36,12 +37,21 @@ function solveLesson(start: CubeState): Omit<Lesson, "scramble"> {
 
   const phases: LessonPhase[] = [];
   const steps: TutorStep[] = [];
+  let cube = view;
+  let noted = false;
   for (const stage of solution.stages) {
     for (const step of stage.steps) {
       const phase =
         phases.push({ id: step.id, stage: stage.stage, name: holdColors(step.name), goal: holdColors(step.goal) }) - 1;
       for (const move of step.moves) {
-        steps.push({ move, stage: stage.stage, phase, explanation: holdColors(explanations[steps.length].text) });
+        let explanation = holdColors(explanations[steps.length].text);
+        cube = applyMoves(cube, [move]);
+        // The solver's frame: the bottom center is "D" while the middle slice is straight.
+        if (!noted && toFacelets(cube)[31] !== "D") {
+          explanation += centersTurnedNote(move);
+          noted = true;
+        }
+        steps.push({ move, stage: stage.stage, phase, explanation });
       }
     }
   }

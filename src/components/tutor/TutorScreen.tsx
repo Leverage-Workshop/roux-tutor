@@ -6,14 +6,15 @@
 // move and keeps writing to the same session.
 //
 // The cube starts held the way the solve holds it (red in front, white on the
-// bottom, see hold.ts), and a hint under the cube view says so.
+// bottom, see hold.ts), and a hint under the cube view says how to hold it,
+// also once the middle slice turns the centers.
 import { useState } from "react";
 import Link from "next/link";
 import { AuthButton } from "@/components/AuthButton";
-import { CubeStoreProvider } from "@/lib/cube/CubeStoreProvider";
+import { CubeStoreProvider, useCubeStore } from "@/lib/cube/CubeStoreProvider";
 import { STICKER_HEX, applyMoves, fromFacelets, solvedState, toFacelets, type StickerColor } from "@/lib/cube/model";
 import type { NewTutoringSession, SessionSource } from "@/lib/supabase/tutoringSessions";
-import { HOLD, HOLD_TEXT } from "@/lib/tutor/hold";
+import { HOLD, HOLD_TEXT, HOLD_TURNED_TEXT, holdCentersStraight } from "@/lib/tutor/hold";
 import { stageEnds, type Lesson } from "@/lib/tutor/lesson";
 import { editorHref } from "@/lib/tutor/links";
 import { CubeView } from "./CubeView";
@@ -79,8 +80,14 @@ export function TutorScreen({
   );
 }
 
-/** How to hold the cube for the solve, under the cube view. */
+/**
+ * How to hold the cube, under the cube view. It follows the cube: red front
+ * and white bottom while the middle slice is straight; once M or r turns the
+ * middle centers, the left and right centers and the blocks' white side down
+ * (what a Roux solver holds the cube by).
+ */
 function HoldHint() {
+  const straight = useCubeStore((s) => holdCentersStraight(s.facelets));
   const side = (color: StickerColor, where: string) => (
     <span className="flex items-center gap-1.5">
       <span
@@ -91,12 +98,17 @@ function HoldHint() {
     </span>
   );
   return (
-    <p className="flex min-h-11 items-center text-sm text-zinc-600 dark:text-zinc-400">
-      <span className="sr-only">Hold the cube: {HOLD_TEXT}.</span>
+    <p className="flex min-h-11 flex-col justify-center text-sm text-zinc-600 dark:text-zinc-400">
+      <span className="sr-only">Hold the cube: {straight ? HOLD_TEXT : HOLD_TURNED_TEXT}.</span>
       <span aria-hidden="true" className="flex items-center gap-3">
-        {side(HOLD.F, "front")}
-        {side(HOLD.D, "bottom")}
+        {straight ? side(HOLD.F, "front") : side(HOLD.L, "left")}
+        {straight ? side(HOLD.D, "bottom") : side(HOLD.R, "right")}
       </span>
+      {!straight && (
+        <span aria-hidden="true" className="text-xs leading-tight">
+          Blocks: {HOLD.D} side down
+        </span>
+      )}
     </p>
   );
 }

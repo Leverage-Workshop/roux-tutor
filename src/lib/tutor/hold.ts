@@ -26,6 +26,15 @@ export const HOLD: Readonly<Record<Face, StickerColor>> = {
 /** How to hold the cube, for the screen. */
 export const HOLD_TEXT = "Red in front, white on the bottom";
 
+/**
+ * How to hold it once the middle slice has turned. M and r (the only moves a
+ * lesson plays that move centers) turn the top, front, bottom and back
+ * centers, so white leaves the bottom center. The left and right centers
+ * never move, and the blocks keep their white side down: that is what Roux
+ * solvers hold the cube by.
+ */
+export const HOLD_TURNED_TEXT = "Blue on the left, green on the right, the blocks' white side down";
+
 /** Facelet letter of each color (letters name a color by its home face, see model.ts). */
 const LETTER = Object.fromEntries(FACES.map((f) => [FACE_COLOR[f], f])) as Record<StickerColor, Face>;
 
@@ -37,6 +46,22 @@ const ROTATIONS: readonly Move[][] = (() => {
   const singles: Move[] = ["x", "x'", "x2", "y", "y'", "y2", "z", "z'", "z2"];
   return [[], ...singles.map((m) => [m]), ...singles.flatMap((a) => singles.map((b) => [a, b]))];
 })();
+
+/**
+ * True while the middle slice is straight, so the centers sit where the hold
+ * puts them (red in front, white on the bottom). `facelets` is the held cube.
+ */
+export function holdCentersStraight(facelets: string): boolean {
+  return facelets[22] === LETTER[HOLD.F] && facelets[31] === LETTER[HOLD.D];
+}
+
+/**
+ * Added to the explanation of the first move that turns the middle centers,
+ * so white leaving the bottom doesn't look like a mistake.
+ */
+export function centersTurnedNote(move: Move): string {
+  return ` ${move} also turns the middle centers, so white leaves the bottom. That's normal in Roux: keep blue left and green right; the centers get fixed last.`;
+}
 
 function centers(state: CubeState): string {
   const facelets = toFacelets(state);
