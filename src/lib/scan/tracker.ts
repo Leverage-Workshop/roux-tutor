@@ -26,9 +26,9 @@ export type TrackerEvent =
 /** Readings in a row that must agree before a side is captured (~0.5 s at 6 per second). */
 export const STEADY_READINGS = 3;
 /** Two readings agree when their stickers are this close on average... */
-const STEADY_MEAN = 9;
+const STEADY_MEAN = 7;
 /** ...and none is further apart than this. */
-const STEADY_MAX = 22;
+const STEADY_MAX = 16;
 /**
  * Two sides have the same center color when their centers are this close: room for the
  * camera's exposure and white balance to drift (a 20% darker red moves ~12),
@@ -97,8 +97,11 @@ export class ScanTracker {
     if (this.run.length < STEADY_READINGS) return { kind: "steadying", steady: this.run.length / STEADY_READINGS };
 
     const lab = this.run[0].lab.map((_, i) => average(this.run.map((r) => r.lab), i));
-    if (this.holding && sameSide(this.holding.lab, lab)) {
-      this.holding.lab = lab;
+    // Still the side just captured, or a side with its center color (the same
+    // side seen at an angle while the cube is being turned): not captured again
+    // until another side has been shown. Tap a side to redo it in place.
+    if (this.holding && (sameSide(this.holding.lab, lab) || sameCenter(this.holding.lab, lab))) {
+      if (sameSide(this.holding.lab, lab)) this.holding.lab = lab;
       return { kind: "already", id: this.holding.id };
     }
     const rgb = this.run[0].rgb.map((_, i) => average(this.run.map((r) => r.rgb), i));
