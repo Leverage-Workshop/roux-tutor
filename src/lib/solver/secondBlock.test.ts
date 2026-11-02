@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { applyMoves, solvedState, type CubeState } from "@/lib/cube/model";
 import { parseAlgorithm, type Move } from "@/lib/cube/notation";
-import { DEMO_SCRAMBLE } from "@/lib/tutor/demoLesson";
+import { DEMO_HELD_SCRAMBLE } from "@/lib/tutor/demoLesson";
 import { isFirstBlockSolved, solveFirstBlock } from "./firstBlock";
 import { CORNERS, EDGES, homeCoord, pieceCoord, type TrackedPiece } from "./pieces";
 import { isSecondBlockSolved, solveBlocks, solveSecondBlock } from "./secondBlock";
@@ -200,7 +200,7 @@ describe("solveSecondBlock", () => {
 
 describe("solveBlocks", () => {
   it("builds both blocks, first block then second", () => {
-    for (const alg of [DEMO_SCRAMBLE, "x " + scrambles(1)[0].join(" "), "M' U r2 F B' L2 D"]) {
+    for (const alg of [DEMO_HELD_SCRAMBLE, "x " + scrambles(1)[0].join(" "), "M' U r2 F B' L2 D"]) {
       const start = scrambled(alg);
       const solution = solveBlocks(start);
       expect(solution.moves).toEqual([...solution.firstBlock.moves, ...solution.secondBlock.moves]);

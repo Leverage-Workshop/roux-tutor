@@ -9,7 +9,15 @@
 import type { Lesson } from "./lesson";
 import { rouxLesson } from "./rouxLesson";
 
-export const DEMO_SCRAMBLE = "F U R' D R' L' D' R' U F D' U F D L' B D2 U D' F L U2 L' D R2";
+/**
+ * The demo scramble as turned with the cube held the tutor's way (red in
+ * front, white on the bottom, see hold.ts): the cube the solver sees. Solver
+ * tests use it.
+ */
+export const DEMO_HELD_SCRAMBLE = "F U R' D R' L' D' R' U F D' U F D L' B D2 U D' F L U2 L' D R2";
+
+/** The same scramble from a solved cube with white on top and green in front (the lesson's `scramble`). */
+export const DEMO_SCRAMBLE = "R D F' U F' B' U' F' D R U' D R U B' L U2 D U' R B D2 B' U F2";
 
 let demo: Lesson | undefined;
 /** The demo lesson, solved on first use (~300ms the first time, while the solver builds its tables). */

@@ -40,10 +40,11 @@ The core loop allows a user to scan their physical scrambled cube with the phone
   2. **Second Block (SB):** Right-side 1x2x3 block construction utilizing R, r, and U layers.
   3. **CMLL:** Simultaneous orientation and permutation of top-layer corners.
   4. **Last Six Edges (LSE):** Solving remaining elements solely via U and M-slice manipulations.
+* **Fixed Hold:** The tutor holds the cube one way for the whole solve, red in front and white on the bottom (blue left, green right, yellow top, orange back), and every move is relative to that hold. The first block is built on blue, the second on green.
 * **Semantic Translators:** Every execution node in the move array must hook into a contextual dictionary to pull descriptive user strings explaining *why* the turn is occurring.
 
 ### C. Unified Mobile UI/UX Viewport
-* **Top Screen Zone (60% Height Canvas):** Interactive 3D webGL canvas hosting the 27 structural cubelets. Swiping outside a cubelet triggers camera rotation; interactions on the cube trigger visual layer rotations.
+* **Top Screen Zone (60% Height Canvas):** Interactive 3D webGL canvas hosting the 27 structural cubelets. Swiping outside a cubelet triggers camera rotation; interactions on the cube trigger visual layer rotations. A Reset view button turns the camera back to its starting angle, and a hint shows how to hold the cube.
 * **Bottom Screen Zone (40% Height Drawer):** Touch-accessible persistent bottom sheet. Displays large format notation font, stage indicators, step progress counters, and explicit contextual tutorial text.
 * **Control Targets:** Large layout touch targets for "Next Move" and "Back" optimized for single-thumb operations on mobile devices.
 
