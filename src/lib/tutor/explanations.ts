@@ -9,8 +9,9 @@
 // on. The entry's {placeholders} are then filled with that move's context
 // (piece colors, positions, case names, moves left in the step).
 //
-// Colors and positions are as the solve holds the cube: orange left, yellow
-// down, white up, green front (the first step rotates the cube there).
+// Colors and positions are as the solver holds the cube: orange left, yellow
+// down, white up, green front (the first step rotates the cube there). The
+// tutor holds it differently and translates the colors (see hold.ts).
 import type { CubeState } from "cubejs";
 import { applyMoves, solvedState } from "@/lib/cube/model";
 import type { Move } from "@/lib/cube/notation";

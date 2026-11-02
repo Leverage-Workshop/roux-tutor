@@ -19,7 +19,7 @@ describe("lessonForCube", () => {
     expect(lesson.scramble).toEqual([]);
     // Same cube as the demo, so the same solve.
     expect(lesson.steps).toEqual(demoLesson().steps);
-    const end = applyMoves(fromFacelets(CUBE), lesson.steps.map((s) => s.move));
+    const end = applyMoves(applyMoves(fromFacelets(CUBE), lesson.hold!), lesson.steps.map((s) => s.move));
     expect(isSolved(end)).toBe(true);
   });
 

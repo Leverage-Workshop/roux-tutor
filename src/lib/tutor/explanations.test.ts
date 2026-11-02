@@ -3,7 +3,7 @@ import { applyMoves, solvedState } from "@/lib/cube/model";
 import { parseAlgorithm, type Move } from "@/lib/cube/notation";
 import { lseBadEdges } from "@/lib/solver/lse";
 import { solveRoux } from "@/lib/solver/roux";
-import { DEMO_SCRAMBLE } from "./demoLesson";
+import { DEMO_HELD_SCRAMBLE } from "./demoLesson";
 import { EXPLANATIONS, explain, explainRouxSolution, isFallback, moveHow, type ExplanationKey } from "./explanations";
 
 // Face turns plus slice and wide turns (so many solves start with turned centers),
@@ -138,7 +138,7 @@ describe("explanation dictionary", () => {
   }, 30_000);
 
   it("names the right pieces, case and progress in the demo solve", () => {
-    const moves = explained(DEMO_SCRAMBLE);
+    const moves = explained(DEMO_HELD_SCRAMBLE);
     const inStep = (id: string) => moves.filter((m) => m.step.id === id);
 
     // First block: the back corner was stuck in the front slot; the front pair joins with R'.

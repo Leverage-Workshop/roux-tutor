@@ -19,7 +19,7 @@ export const ROUX_STAGES: readonly RouxStage[] = [
     id: "fb",
     name: "First Block",
     short: "FB",
-    goal: "Build a 1x2x3 block on the left side: the orange center with its bottom two layers of edges and corners.",
+    goal: "Build a 1x2x3 block on the left side: the blue center with its bottom two layers of edges and corners.",
   },
   {
     id: "sb",
@@ -71,6 +71,12 @@ export interface Lesson {
   scramble: Move[];
   /** The starting position as a facelet string, when the cube was entered rather than scrambled. */
   start?: string;
+  /**
+   * Whole-cube rotation from the starting position to how the solve holds the
+   * cube (red in front, white on the bottom, see hold.ts); `steps` are played
+   * from there. Absent for hand-made lessons, which start as they are.
+   */
+  hold?: Move[];
   steps: TutorStep[];
   /** The solve's steps; each move's `phase` points here. Absent for hand-made lessons. */
   phases?: LessonPhase[];

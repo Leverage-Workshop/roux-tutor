@@ -6,5 +6,5 @@ import { useCubeStore } from "@/lib/cube/CubeStoreProvider";
 
 export function CubeNet() {
   const facelets = useCubeStore((s) => s.facelets);
-  return <FaceletNet facelets={facelets} style={{ width: "min(100%, calc((60dvh - 6rem) * 4 / 3))" }} />;
+  return <FaceletNet facelets={facelets} style={{ width: "min(100%, calc((60dvh - 9rem) * 4 / 3))" }} />;
 }

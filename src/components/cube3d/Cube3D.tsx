@@ -1,11 +1,12 @@
 "use client";
 // 3D cube: 27 cubelets colored from the cube store, drag to look around
-// (drei OrbitControls), and an animated layer turn for each Next / Back.
+// (drei OrbitControls), an animated layer turn for each Next / Back, and a
+// button that turns the view back to the starting angle.
 // Loaded lazily by CubeView (three.js is large), browser only.
 //
 // The canvas only draws when something changes (frameloop="demand"): while a
 // turn plays, useFrame keeps asking for the next frame; otherwise it idles.
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentRef, type ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
@@ -33,6 +34,9 @@ const FOV = 35;
 const FIT_RADIUS = 2.45;
 /** Start looking at the U, F and R faces from slightly above. */
 const CAMERA_DIRECTION = new THREE.Vector3(0.55, 0.6, 1).normalize();
+/** The same direction as OrbitControls angles, for Reset view. */
+const START_VIEW = new THREE.Spherical().setFromVector3(CAMERA_DIRECTION);
+const RESET_SECONDS = 0.5;
 /** Longest step a frame may advance a turn, so a stalled tab doesn't skip the animation. */
 const MAX_FRAME_SECONDS = 1 / 20;
 
@@ -51,22 +55,74 @@ const CUBELET_STICKERS: Sticker[][] = CUBELETS.map((c) =>
   STICKERS.filter((s) => s.cubelet[0] === c[0] && s.cubelet[1] === c[1] && s.cubelet[2] === c[2]),
 );
 
-export function Cube3D() {
+/** `caption` sits in the row under the cube, left of the Reset view button. */
+export function Cube3D({ caption }: { caption?: ReactNode }) {
   const store = useCubeStoreApi();
+  const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
+
+  const resetAnimation = useRef(0);
+  useEffect(() => () => cancelAnimationFrame(resetAnimation.current), []);
+
+  // Swing the camera back to where it started over a moment (at once with
+  // reduced motion). Dragging during the swing stops it.
+  const resetView = () => {
+    const c = controls.current;
+    if (!c) return;
+    cancelAnimationFrame(resetAnimation.current);
+    const fromTheta = c.getAzimuthalAngle();
+    const fromPhi = c.getPolarAngle();
+    // Shortest way around.
+    const dTheta = THREE.MathUtils.euclideanModulo(START_VIEW.theta - fromTheta + Math.PI, 2 * Math.PI) - Math.PI;
+    const dPhi = START_VIEW.phi - fromPhi;
+    const instant = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const started = performance.now();
+    let stopped = false;
+    const stop = () => {
+      stopped = true;
+      c.removeEventListener("start", stop);
+    };
+    c.addEventListener("start", stop);
+    const step = (now: number) => {
+      if (stopped) return;
+      const t = instant ? 1 : Math.min((now - started) / (RESET_SECONDS * 1000), 1);
+      const eased = 1 - (1 - t) ** 3;
+      // Without damping each angle is set exactly, and any leftover spin is dropped.
+      c.enableDamping = false;
+      c.setAzimuthalAngle(fromTheta + dTheta * eased);
+      c.setPolarAngle(fromPhi + dPhi * eased);
+      c.enableDamping = true;
+      if (t < 1) resetAnimation.current = requestAnimationFrame(step);
+      else stop();
+    };
+    resetAnimation.current = requestAnimationFrame(step);
+  };
+
   return (
-    <div
-      role="img"
-      aria-label="3D view of the cube. Drag to look around it."
-      className="h-full w-full touch-none"
-    >
-      <Canvas frameloop="demand" dpr={[1, 2]} flat camera={{ fov: FOV, position: [0, 0, 10] }}>
-        <ambientLight intensity={1.6} />
-        <directionalLight position={[3, 6, 5]} intensity={1.6} />
-        <directionalLight position={[-4, -3, -5]} intensity={0.8} />
-        <CubeModel store={store} />
-        <FitCamera />
-        <OrbitControls enablePan={false} enableZoom={false} enableDamping rotateSpeed={0.9} />
-      </Canvas>
+    <div className="flex h-full w-full flex-col">
+      <div role="img" aria-label="3D view of the cube. Drag to look around it." className="min-h-0 w-full flex-1 touch-none">
+        <Canvas frameloop="demand" dpr={[1, 2]} flat camera={{ fov: FOV, position: [0, 0, 10] }}>
+          <ambientLight intensity={1.6} />
+          <directionalLight position={[3, 6, 5]} intensity={1.6} />
+          <directionalLight position={[-4, -3, -5]} intensity={0.8} />
+          <CubeModel store={store} />
+          <FitCamera />
+          <OrbitControls ref={controls} enablePan={false} enableZoom={false} enableDamping rotateSpeed={0.9} />
+        </Canvas>
+      </div>
+      <div className="flex items-center justify-between gap-2 px-4 pb-2">
+        {caption ?? <span />}
+        <button
+          type="button"
+          onClick={resetView}
+          className="flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-full border border-zinc-300 px-3 text-sm font-medium text-zinc-700 active:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:active:bg-zinc-800"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 12a9 9 0 1 0 3-6.7" />
+            <path d="M3 3v6h6" />
+          </svg>
+          <span className="max-[359px]:sr-only">Reset view</span>
+        </button>
+      </div>
     </div>
   );
 }

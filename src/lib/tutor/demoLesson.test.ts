@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { applyMoves, faceletPosition, isSolved, solvedState, toFacelets, type Face } from "@/lib/cube/model";
 import { parseAlgorithm } from "@/lib/cube/notation";
 import { solveRoux } from "@/lib/solver/roux";
-import { DEMO_SCRAMBLE, demoLesson } from "./demoLesson";
+import { DEMO_HELD_SCRAMBLE, DEMO_SCRAMBLE, demoLesson } from "./demoLesson";
+import { solverView } from "./hold";
 import { ROUX_STAGES, type RouxStageId } from "./lesson";
 
 const DEMO_LESSON = demoLesson();
@@ -32,11 +33,18 @@ function solvedAt(facelets: string, where: Where): boolean {
   });
 }
 
-/** Facelets after the given stage (then `extra` moves, e.g. a top-layer turn). */
+const DEMO_START = applyMoves(solvedState(), DEMO_LESSON.scramble);
+const DEMO_HELD = applyMoves(DEMO_START, DEMO_LESSON.hold ?? []);
+
+/**
+ * Facelets after the given stage (then `extra` moves, e.g. a top-layer turn),
+ * named after the held cube's centers (see solverView), so the groups below
+ * hold for it.
+ */
 function stateAfter(stage: RouxStageId | null, extra = "") {
   const last = stage ? DEMO_LESSON.steps.findLastIndex((s) => s.stage === stage) : -1;
   const moves = DEMO_LESSON.steps.slice(0, last + 1).map((s) => s.move);
-  return toFacelets(applyMoves(applyMoves(applyMoves(solvedState(), DEMO_LESSON.scramble), moves), extra));
+  return toFacelets(solverView(applyMoves(applyMoves(DEMO_HELD, moves), extra)));
 }
 
 describe("facelet groups", () => {
@@ -60,11 +68,15 @@ describe("demo lesson", () => {
     expect(order).toEqual(ROUX_STAGES.map((s) => s.id));
   });
 
-  it("starts scrambled with white on top and green in front", () => {
-    const start = stateAfter(null);
+  it("starts scrambled with white on top and green in front, then is held red in front and white on the bottom", () => {
+    const start = toFacelets(DEMO_START);
     expect(start).not.toBe(toFacelets(solvedState()));
-    expect(solvedAt(start, FIRST_BLOCK)).toBe(false);
-    expect([4, 13, 22, 31, 40, 49].map((i) => start[i]).join("")).toBe("URFDLB");
+    expect(solvedAt(stateAfter(null), FIRST_BLOCK)).toBe(false);
+    const centers = (f: string) => [4, 13, 22, 31, 40, 49].map((i) => f[i]).join("");
+    expect(centers(start)).toBe("URFDLB");
+    expect(DEMO_LESSON.hold).toEqual(["x2", "y"]);
+    // U yellow, R green, F red, D white, L blue, B orange.
+    expect(centers(toFacelets(DEMO_HELD))).toBe("DFRUBL");
   });
 
   it("completes each stage's pieces when that stage ends", () => {
@@ -82,12 +94,13 @@ describe("demo lesson", () => {
     expect(["", "U", "U2", "U'"].some((auf) => solvedAt(stateAfter("cmll", auf), TOP_CORNERS))).toBe(true);
     expect(solvedAt(cmll, EVERYTHING)).toBe(false);
 
-    expect(isSolved(applyMoves(applyMoves(solvedState(), DEMO_LESSON.scramble), DEMO_LESSON.steps.map((s) => s.move)))).toBe(true);
+    expect(isSolved(applyMoves(DEMO_HELD, DEMO_LESSON.steps.map((s) => s.move)))).toBe(true);
   });
 
   it("is the Roux solver's solve of the demo scramble, with every move explained", () => {
     expect(DEMO_LESSON.scramble).toEqual(parseAlgorithm(DEMO_SCRAMBLE));
-    const solution = solveRoux(applyMoves(solvedState(), DEMO_SCRAMBLE));
+    // The solver sees the held cube.
+    const solution = solveRoux(applyMoves(solvedState(), DEMO_HELD_SCRAMBLE));
     expect(DEMO_LESSON.steps.map((s) => s.move)).toEqual(solution.moves);
     expect(DEMO_LESSON.phases?.map((p) => p.id)).toEqual(solution.stages.flatMap((s) => s.steps.map((step) => step.id)));
     for (const step of DEMO_LESSON.steps) {

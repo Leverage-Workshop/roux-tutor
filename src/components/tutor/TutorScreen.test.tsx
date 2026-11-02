@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { STICKER_HEX } from "@/lib/cube/model";
 import { demoLesson } from "@/lib/tutor/demoLesson";
 import { createLesson, type Lesson } from "@/lib/tutor/lesson";
 import { TutorScreen } from "./TutorScreen";
@@ -162,5 +163,27 @@ describe("TutorScreen", () => {
     for (const face of screen.getByRole("img", { name: /six faces/ }).querySelectorAll("[data-face]")) {
       expect(new Set([...face.children].map((c) => (c as HTMLElement).style.backgroundColor)).size).toBe(1);
     }
+  });
+
+  it("holds the solver's cube red in front and white on the bottom, and says so", () => {
+    setup(demoLesson());
+    expect(screen.getByText("Hold the cube: Red in front, white on the bottom.")).toBeDefined();
+    const net = screen.getByRole("img", { name: /six faces/ });
+    const center = (face: string) =>
+      (net.querySelector(`[data-face="${face}"]`)!.children[4] as HTMLElement).style.backgroundColor;
+    const hex = (h: string) => {
+      const div = document.createElement("div");
+      div.style.backgroundColor = h;
+      return div.style.backgroundColor;
+    };
+    expect(center("F")).toBe(hex(STICKER_HEX.red));
+    expect(center("D")).toBe(hex(STICKER_HEX.white));
+    expect(center("L")).toBe(hex(STICKER_HEX.blue));
+    expect(center("U")).toBe(hex(STICKER_HEX.yellow));
+  });
+
+  it("shows no hint for lessons that don't hold the cube", () => {
+    setup();
+    expect(screen.queryByText(/Hold the cube/)).toBeNull();
   });
 });

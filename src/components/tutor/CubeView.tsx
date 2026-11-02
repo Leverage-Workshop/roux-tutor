@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { Component, useSyncExternalStore, type ReactNode } from "react";
 import { CubeNet } from "./CubeNet";
 
+// `caption` (e.g. how to hold the cube) shows in a row under the cube.
 const Cube3D = dynamic(() => import("@/components/cube3d/Cube3D").then((m) => m.Cube3D), {
   ssr: false,
   loading: () => <CubeLoading />,
@@ -31,22 +32,25 @@ function hasWebGL(): boolean {
 
 const subscribeNever = () => () => {};
 
-export function CubeView() {
+export function CubeView({ caption }: { caption?: ReactNode }) {
   // null on the server and during hydration, where WebGL can't be checked.
   const webgl = useSyncExternalStore(subscribeNever, hasWebGL, () => null);
   if (webgl === null) return <CubeLoading />;
-  if (!webgl) return <FlatCube />;
+  if (!webgl) return <FlatCube caption={caption} />;
   return (
-    <FallbackOnError fallback={<FlatCube />}>
-      <Cube3D />
+    <FallbackOnError fallback={<FlatCube caption={caption} />}>
+      <Cube3D caption={caption} />
     </FallbackOnError>
   );
 }
 
-function FlatCube() {
+function FlatCube({ caption }: { caption?: ReactNode }) {
   return (
-    <div className="flex h-full items-center justify-center px-4 pb-4">
-      <CubeNet />
+    <div className="flex h-full flex-col">
+      <div className="flex min-h-0 flex-1 items-center justify-center px-4 pb-2">
+        <CubeNet />
+      </div>
+      {caption && <div className="flex px-4 pb-1">{caption}</div>}
     </div>
   );
 }
