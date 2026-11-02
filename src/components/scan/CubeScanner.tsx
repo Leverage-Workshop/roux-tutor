@@ -15,6 +15,8 @@ import { editorHref } from "@/lib/tutor/links";
 
 /** Time between analyzed frames. */
 const FRAME_MS = 160;
+/** Time the camera gets to settle its exposure and focus before frames are analyzed. */
+const WARMUP_MS = 1000;
 
 type Camera = "starting" | "live" | "blocked" | "unavailable";
 
@@ -100,8 +102,11 @@ export function CubeScanner() {
           // Autoplay of a muted inline video is allowed; if it still fails, the frames stay empty.
         }
       }
-      setCamera("live");
-      timer = setTimeout(tick, FRAME_MS);
+      // The first frames are often grey or blurry while the camera adjusts.
+      timer = setTimeout(() => {
+        setCamera("live");
+        tick();
+      }, WARMUP_MS);
     })();
 
     return () => {

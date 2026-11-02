@@ -85,6 +85,19 @@ describe("findFace", () => {
     expect(findFace(drawPlain((x, y) => [x * 2, y * 2, 128]))).toBeNull();
   });
 
+  it("finds nothing in a grey grid, like a washed-out or dark camera frame, but reads a white side", () => {
+    // A scrambled side in a washed-out frame: barely any color or contrast left.
+    const wash = (c: Rgb) => c.map((v) => 120 + (v - 120) * 0.1) as unknown as Rgb;
+    const side: Face[] = ["B", "B", "R", "U", "L", "D", "F", "U", "R"];
+    expect(findFace(drawSide(side.map((f) => wash(CAMERA_RGB[f])), { body: wash([22, 22, 24]), noise: 3 }))).toBeNull();
+    // Dark grey stickers, or grey keys with shallow seams.
+    expect(findFace(drawSide(Array(9).fill([60, 60, 64]), { noise: 4 }))).toBeNull();
+    expect(findFace(drawSide(Array(9).fill([150, 150, 154]), { body: [115, 115, 118], noise: 4 }))).toBeNull();
+    expect(readBack(Array(9).fill("U"), {})).toEqual(Array(9).fill("U"));
+    const dimWhite = findFace(drawSide(Array(9).fill(CAMERA_RGB.U.map((v) => v * 0.75) as unknown as Rgb)));
+    expect(dimWhite).not.toBeNull();
+  });
+
   it("is fast enough for several frames a second", () => {
     const side = drawSide(randomSide(seeded(5)).map((f) => CAMERA_RGB[f]));
     findFace(side);

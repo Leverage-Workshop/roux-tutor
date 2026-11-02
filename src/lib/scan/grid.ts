@@ -226,6 +226,12 @@ const MIN_UNIFORM_CENTER = 0.35;
 const MIN_CONTRAST = 14;
 /** ...and more when all 9 cells are one color. */
 const MIN_PLAIN_CONTRAST = 18;
+/** A sticker with less color than this (Lab chroma) is white or grey. */
+const COLORLESS = 14;
+/** A side of only colorless stickers must be this bright (Lab L) to be white ones... */
+const MIN_WHITE_L = 45;
+/** ...and its gaps must stand out this much, as a cube's dark gaps do around white stickers. */
+const MIN_WHITE_CONTRAST = 40;
 
 /** Look for one side of the cube in the snapshot. Null when there isn't a clear one. */
 export function findFace(img: Snapshot): FaceRead | null {
@@ -255,6 +261,13 @@ export function findFace(img: Snapshot): FaceRead | null {
   const { contrast } = measure(p, grid, 4, 10, 1);
   if (contrast < (allSame ? MIN_PLAIN_CONTRAST : MIN_CONTRAST)) return null;
 
+  // All grey, and dark or with faint gaps: the camera's first frames before
+  // its exposure settles, grey plastic, a keyboard. A real side has color in
+  // it, unless it is all white stickers.
+  const lab = rgb.map(rgbToLab);
+  const colorless = lab.every(([, a, b]) => Math.hypot(a, b) < COLORLESS);
+  if (colorless && (Math.min(...lab.map(([l]) => l)) < MIN_WHITE_L || contrast < MIN_WHITE_CONTRAST)) return null;
+
   const corners = [place(grid, -0.5, -0.5), place(grid, 0.5, -0.5), place(grid, 0.5, 0.5), place(grid, -0.5, 0.5)] as FaceRead["corners"];
-  return { corners, rgb, lab: rgb.map(rgbToLab), contrast };
+  return { corners, rgb, lab, contrast };
 }

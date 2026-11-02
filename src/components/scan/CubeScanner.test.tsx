@@ -54,6 +54,8 @@ const status = () => screen.getByRole("status").textContent;
 const frame = async (n = 1) => {
   for (let k = 0; k < n; k++) await act(() => vi.advanceTimersByTimeAsync(160));
 };
+/** Let the camera start and warm up (1 s) before frames are analyzed. */
+const start = () => frame(8);
 const holdSide = (side: readonly Face[]) => (frames.push(null, reading(side), reading(side), reading(side)), frame(4));
 
 beforeEach(() => {
@@ -73,7 +75,7 @@ describe("CubeScanner", () => {
     const getUserMedia = mockCamera("ok");
     render(<CubeScanner />);
     expect(status()).toBe("Starting the camera…");
-    await frame();
+    await start();
     expect(getUserMedia).toHaveBeenCalledWith(
       expect.objectContaining({ video: expect.objectContaining({ facingMode: { ideal: "environment" } }) }),
     );
@@ -81,10 +83,22 @@ describe("CubeScanner", () => {
     expect(screen.getAllByLabelText(/not scanned yet/)).toHaveLength(6);
   });
 
+  it("waits for the camera to settle before reading frames", async () => {
+    mockCamera("ok");
+    render(<CubeScanner />);
+    // A grey-ish first frame would read as a side; it arrives while the camera warms up.
+    frames.push(reading(SIDES[2]), reading(SIDES[2]), reading(SIDES[2]));
+    await frame(4);
+    expect(status()).toBe("Starting the camera…");
+    expect(frames).toHaveLength(3);
+    await frame(3);
+    expect(status()).toBe("Hold still…");
+  });
+
   it("captures sides as they are held steady, knows repeats, and opens the editor with the cube", async () => {
     mockCamera("ok");
     render(<CubeScanner />);
-    await frame();
+    await start();
     frames.push(reading(SIDES[2]), reading(SIDES[2]));
     await frame(2);
     expect(status()).toBe("Hold still…");
@@ -108,7 +122,7 @@ describe("CubeScanner", () => {
   it("lets the user redo a scanned side", async () => {
     mockCamera("ok");
     render(<CubeScanner />);
-    await frame();
+    await start();
     await holdSide(SIDES[1]);
     fireEvent.click(screen.getByRole("button", { name: /^Side 1: scanned/ }));
     expect(screen.getAllByLabelText(/not scanned yet/)).toHaveLength(6);
@@ -119,7 +133,7 @@ describe("CubeScanner", () => {
   it("replaces a scanned side when a side with the same center is shown", async () => {
     mockCamera("ok");
     render(<CubeScanner />);
-    await frame();
+    await start();
     // A bad read of side 3's center color, then side 4, then the real side 3.
     const misread = SIDES[5].map((f, i) => (i === 4 ? SIDES[2][4] : f));
     await holdSide(misread);
