@@ -82,6 +82,17 @@ describe("ScanTracker", () => {
     expect(tracker.push(reading(SIDES[1], 7))).toEqual({ kind: "already", id: first.id });
   });
 
+  it("does not capture the side being held again while the cube is turned away from it", () => {
+    const tracker = new ScanTracker();
+    hold(tracker, SIDES[1]);
+    // Mid-turn, the same side seen at an angle reads with some wrong stickers.
+    const angled = SIDES[1].map((f, i) => (i % 3 === 2 ? SIDES[4][i] : f));
+    tracker.push(null);
+    expect(hold(tracker, angled).at(-1)).toEqual({ kind: "already", id: tracker.sides[0].id });
+    expect(tracker.sides).toHaveLength(1);
+    expect(sameSide(tracker.sides[0].lab, reading(SIDES[1]).lab)).toBe(true);
+  });
+
   it("refreshes a side when it is shown again after another one", () => {
     const tracker = new ScanTracker();
     hold(tracker, SIDES[0]);

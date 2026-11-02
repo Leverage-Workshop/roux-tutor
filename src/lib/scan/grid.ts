@@ -228,9 +228,17 @@ const MIN_CONTRAST = 14;
 const MIN_PLAIN_CONTRAST = 18;
 /** A sticker with less color than this (Lab chroma) is white or grey. */
 const COLORLESS = 14;
-/** A side of only colorless stickers must be this bright (Lab L) to be white ones... */
+/**
+ * A sticker with color must have at least this much: real sticker colors keep
+ * 27+ even at 40% brightness, while grey, shadow, skin in shade, or a blur of
+ * two stickers falls in between.
+ */
+const MIN_COLOR = 24;
+/** A colorless sticker must be this bright (Lab L) to be white, not grey, black or shadow... */
 const MIN_WHITE_L = 45;
-/** ...and its gaps must stand out this much, as a cube's dark gaps do around white stickers. */
+/** ...and white is the brightest cube color: no darker than this below the side's brightest colored sticker. */
+const WHITE_BELOW_COLOR = 12;
+/** ...and a side of only white stickers must have gaps that stand out this much, as a cube's dark gaps do. */
 const MIN_WHITE_CONTRAST = 40;
 
 /** Look for one side of the cube in the snapshot. Null when there isn't a clear one. */
@@ -261,12 +269,17 @@ export function findFace(img: Snapshot): FaceRead | null {
   const { contrast } = measure(p, grid, 4, 10, 1);
   if (contrast < (allSame ? MIN_PLAIN_CONTRAST : MIN_CONTRAST)) return null;
 
-  // All grey, and dark or with faint gaps: the camera's first frames before
-  // its exposure settles, grey plastic, a keyboard. A real side has color in
-  // it, unless it is all white stickers.
+  // Every sticker must look like a cube color: clearly white, or clearly
+  // colored. Anything else is not a sticker, or a blurry or shaded one.
   const lab = rgb.map(rgbToLab);
-  const colorless = lab.every(([, a, b]) => Math.hypot(a, b) < COLORLESS);
-  if (colorless && (Math.min(...lab.map(([l]) => l)) < MIN_WHITE_L || contrast < MIN_WHITE_CONTRAST)) return null;
+  const chroma = lab.map(([, a, b]) => Math.hypot(a, b));
+  const brightestColor = Math.max(0, ...lab.filter((_, i) => chroma[i] >= COLORLESS).map(([l]) => l));
+  const minWhite = Math.max(MIN_WHITE_L, brightestColor - WHITE_BELOW_COLOR);
+  const valid = (c: number, i: number) => (c < COLORLESS ? lab[i][0] >= minWhite : c >= MIN_COLOR);
+  if (!chroma.every(valid)) return null;
+  // All white with faint gaps: the camera's first frames before its exposure
+  // settles, grey plastic, a keyboard.
+  if (chroma.every((c) => c < COLORLESS) && contrast < MIN_WHITE_CONTRAST) return null;
 
   const corners = [place(grid, -0.5, -0.5), place(grid, 0.5, -0.5), place(grid, 0.5, 0.5), place(grid, -0.5, 0.5)] as FaceRead["corners"];
   return { corners, rgb, lab, contrast };

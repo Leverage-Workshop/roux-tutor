@@ -62,6 +62,15 @@ describe("findFace", () => {
     expect(dim).not.toBeNull();
   });
 
+  it("finds nothing when a sticker is not a cube color: grey, in shadow, or blurred into its neighbor", () => {
+    const side: Rgb[] = (["B", "B", "R", "U", "L", "D", "F", "U", "R"] as Face[]).map((f) => CAMERA_RGB[f]);
+    expect(findFace(drawSide(side))).not.toBeNull();
+    const blend = CAMERA_RGB.R.map((v, i) => (v + CAMERA_RGB.F[i]) / 2) as unknown as Rgb;
+    for (const odd of [[128, 128, 130], [70, 68, 72], blend] as Rgb[]) {
+      expect(findFace(drawSide(side.map((c, i) => (i === 7 ? odd : c)))), JSON.stringify(odd)).toBeNull();
+    }
+  });
+
   it("reads through a thumb over part of a sticker", () => {
     const side: Face[] = ["B", "B", "R", "U", "L", "D", "F", "U", "R"];
     expect(readBack(side, { thumb: { x: 76, y: 93, r: 12 } })).toEqual(side);
