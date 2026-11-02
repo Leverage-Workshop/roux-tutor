@@ -186,4 +186,19 @@ describe("TutorScreen", () => {
     setup();
     expect(screen.queryByText(/Hold the cube/)).toBeNull();
   });
+
+  it("switches the hold hint to the left and right centers once the middle slice turns", () => {
+    const lesson = demoLesson();
+    const ui = setup(lesson);
+    const first = lesson.steps.findIndex((s) => /also turns the middle centers/.test(s.explanation!));
+    for (let i = 0; i < first; i++) ui.next();
+    expect(screen.getByText("Hold the cube: Red in front, white on the bottom.")).toBeDefined();
+    ui.next();
+    expect(
+      screen.getByText("Hold the cube: Blue on the left, green on the right, the blocks' white side down."),
+    ).toBeDefined();
+    expect(screen.getByText("Blocks: white side down")).toBeDefined();
+    ui.back();
+    expect(screen.getByText("Hold the cube: Red in front, white on the bottom.")).toBeDefined();
+  });
 });
