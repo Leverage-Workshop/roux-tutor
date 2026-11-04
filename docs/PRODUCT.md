@@ -45,7 +45,7 @@ The core loop allows a user to scan their physical scrambled cube with the phone
 
 ### C. Unified Mobile UI/UX Viewport
 * **Top Screen Zone (60% Height Canvas):** Interactive 3D webGL canvas hosting the 27 structural cubelets. Swiping outside a cubelet triggers camera rotation; interactions on the cube trigger visual layer rotations. A Reset view button turns the camera back to its starting angle, and a hint shows how to hold the cube.
-* **Bottom Screen Zone (40% Height Drawer):** Touch-accessible persistent bottom sheet. Displays large format notation font, stage indicators, step progress counters, and explicit contextual tutorial text.
+* **Bottom Screen Zone (40% Height Drawer):** Touch-accessible persistent bottom sheet. Displays stage indicators, step progress counters, the current step's moves, its goal, and every move of the step in a list with its explanation; Next and Back scroll the list to the current move. An expand button grows the sheet to 70% (cube 30%) to read a whole step at once.
 * **Control Targets:** Large layout touch targets for "Next Move" and "Back" optimized for single-thumb operations on mobile devices.
 
 ## 5. Security & Edge Delivery

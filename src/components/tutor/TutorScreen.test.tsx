@@ -119,35 +119,63 @@ describe("TutorScreen", () => {
     expect(screen.getByText("Move 2 of 3")).toBeDefined();
   });
 
-  it("shows the current move's explanation, its step's name and goal, and updates them on Next and Back", () => {
+  it("lists every move of the current step with its explanation under the step's goal, following Next and Back", () => {
     const ui = setup(EXPLAINED);
-    expect(screen.getByText("R explains the first move.")).toBeDefined();
+    const explained = () =>
+      within(screen.getByRole("list", { name: "What each move does" }))
+        .getAllByRole("listitem")
+        .map((li) => [li.textContent, li.getAttribute("aria-current")]);
     expect(screen.getByText("Bottom-left edge")).toBeDefined();
+    expect(screen.getByText("Put the yellow-orange edge in the bottom-left slot.")).toBeDefined();
     expect(screen.queryByText(/1x2x3 block on the left/)).toBeNull();
-    // The step's goal opens from "About this step" and closes again when the next step starts.
-    const goal = () => screen.getByText("Put the yellow-orange edge in the bottom-left slot.");
-    expect(goal().hidden).toBe(true);
-    act(() => fireEvent.click(screen.getByRole("button", { name: "About this step" })));
-    expect(goal().hidden).toBe(false);
-    expect(screen.getByRole("button", { name: "Hide step goal" }).getAttribute("aria-expanded")).toBe("true");
-    // The dialog's description is the explanation, for screen readers.
-    const describedBy = screen.getByRole("dialog").getAttribute("aria-describedby");
-    expect(document.getElementById(describedBy ?? "")?.textContent).toBe("R explains the first move.");
+    expect(explained()).toEqual([["Next move: RR explains the first move.", "step"]]);
+    // The dialog's description is the current move's explanation, for screen readers.
+    const description = () =>
+      document.getElementById(screen.getByRole("dialog").getAttribute("aria-describedby") ?? "")?.textContent;
+    expect(description()).toBe("R explains the first move.");
 
     ui.next();
-    expect(screen.getByText("U explains the second move.")).toBeDefined();
-    expect(screen.getByText("Put the yellow-red edge in the bottom-right slot.").hidden).toBe(true);
-    expect(screen.queryByText("R explains the first move.")).toBeNull();
     expect(screen.getByText("Bottom-right edge")).toBeDefined();
+    expect(screen.getByText("Put the yellow-red edge in the bottom-right slot.")).toBeDefined();
+    expect(screen.queryByText("R explains the first move.")).toBeNull();
+    // The whole step is listed at once, the current move marked.
+    expect(explained()).toEqual([
+      ["Next move: UU explains the second move.", "step"],
+      ["R'R' explains the third move.", null],
+    ]);
+    expect(description()).toBe("U explains the second move.");
     const moves = within(screen.getByRole("list", { name: "Moves in this step" })).getAllByRole("listitem");
     expect(moves.map((m) => m.textContent)).toEqual(["U", "R'"]);
 
     ui.next();
-    expect(screen.getByText("R' explains the third move.")).toBeDefined();
+    expect(explained()).toEqual([
+      ["UU explains the second move.", null],
+      ["Next move: R'R' explains the third move.", "step"],
+    ]);
+    expect(description()).toBe("R' explains the third move.");
     ui.back();
     ui.back();
-    expect(screen.getByText("R explains the first move.")).toBeDefined();
+    expect(explained()).toEqual([["Next move: RR explains the first move.", "step"]]);
     expect(within(screen.getByRole("list", { name: "Moves in this step" })).getAllByRole("listitem")).toHaveLength(1);
+  });
+
+  it("expands the sheet to 70% of the screen, shrinking the cube view, and back", () => {
+    setup(EXPLAINED);
+    const expand = screen.getByRole("button", { name: "Show more of the step" });
+    const sheet = screen.getByRole("dialog");
+    const cube = screen.getByRole("region", { name: "Cube" });
+    expect(expand.getAttribute("aria-expanded")).toBe("false");
+    expect(sheet.className).toContain("h-[40dvh]");
+    expect(cube.className).toContain("h-[60dvh]");
+
+    act(() => fireEvent.click(expand));
+    expect(expand.getAttribute("aria-expanded")).toBe("true");
+    expect(sheet.className).toContain("h-[70dvh]");
+    expect(cube.className).toContain("h-[30dvh]");
+
+    act(() => fireEvent.click(expand));
+    expect(sheet.className).toContain("h-[40dvh]");
+    expect(cube.className).toContain("h-[60dvh]");
   });
 
   it("plays the solver's demo lesson, explaining every move, to a solved cube", () => {

@@ -1,24 +1,34 @@
 "use client";
 // Persistent bottom sheet (bottom 40% of the screen): stage indicator, move
-// counter, the next move in large notation with the rest of its step, the
-// step's name, why the move is played (with the step's goal one tap away),
-// and Back / Next buttons sized for one thumb.
+// counter, the current step's name and moves, then (scrolling) the step's goal
+// and every move of the step with why it is played, and Back / Next buttons
+// sized for one thumb. Next and Back scroll the list to the current move.
+// An expand button grows the sheet to 70% of the screen (the cube view above
+// shrinks to match, see TutorScreen) to read a whole step at once.
 //
 // A Base UI drawer that is always open and non-modal: the cube view above stays
 // usable, focus is not trapped, and outside taps or Escape don't close it.
 // Drawer.Viewport (which adds swipe gestures) is left out, so it can't be
 // dragged away.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Drawer } from "@base-ui/react/drawer";
 import { useCubeStore } from "@/lib/cube/CubeStoreProvider";
 import { ROUX_STAGES, stageById, type Lesson, type RouxStageId } from "@/lib/tutor/lesson";
 
 // Shared by the drawer and the empty outline the server renders in its place.
 const SHEET_CLASS =
-  "fixed inset-x-0 bottom-0 z-10 mx-auto flex h-[40dvh] max-w-md flex-col gap-3 [@media(max-height:700px)]:gap-2 rounded-t-3xl border-t border-zinc-200 bg-white px-4 pt-3 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] dark:border-zinc-800 dark:bg-zinc-900";
+  "fixed inset-x-0 bottom-0 z-10 mx-auto flex max-w-md flex-col gap-3 [@media(max-height:700px)]:gap-2 rounded-t-3xl border-t border-zinc-200 bg-white px-4 pt-3 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] dark:border-zinc-800 dark:bg-zinc-900";
 const SHEET_STYLE = { paddingBottom: "max(1rem, env(safe-area-inset-bottom))" };
 
-export function TutorDrawer({ lesson }: { lesson: Lesson }) {
+export function TutorDrawer({
+  lesson,
+  expanded = false,
+  onExpandedChange,
+}: {
+  lesson: Lesson;
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
+}) {
   const stepIndex = useCubeStore((s) => s.stepIndex);
   const next = useCubeStore((s) => s.next);
   const back = useCubeStore((s) => s.back);
@@ -28,33 +38,49 @@ export function TutorDrawer({ lesson }: { lesson: Lesson }) {
   const step = finished ? null : lesson.steps[stepIndex];
   const stage = step ? stageById(step.stage) : null;
   // The solver step this move belongs to (lessons built by hand have none:
-  // then the move list shows the whole stage).
+  // then the lists show the whole stage, under the stage's goal).
   const phase = step?.phase !== undefined ? lesson.phases?.[step.phase] : undefined;
-  // The step goal opens per step: moving on to the next step closes it.
-  const [openGoal, setOpenGoal] = useState<number | null>(null);
-  const goalOpen = phase !== undefined && openGoal === step?.phase;
-  const goalRef = useRef<HTMLParagraphElement>(null);
-  // The goal opens below the explanation; bring it into view if the sheet is short.
-  useEffect(() => {
-    if (goalOpen) goalRef.current?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
-  }, [goalOpen]);
   const groupMoves = step
     ? lesson.steps
         .map((s, i) => ({ ...s, i }))
         .filter((s) => (phase ? s.phase === step.phase : s.stage === step.stage))
     : [];
+  const goal = phase?.goal ?? stage?.goal;
+  const firstInGroup = groupMoves[0]?.i === stepIndex;
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const currentRef = useRef<HTMLLIElement>(null);
+  const scrolledBefore = useRef(false);
+  // Keep the current move in view. A step's first move shows as much of the
+  // goal above it as fits; later moves sit at the top, with the moves still to
+  // come below them.
+  useEffect(() => {
+    const box = scrollRef.current;
+    const item = currentRef.current;
+    if (!box) return;
+    let top = 0;
+    if (item) {
+      const itemTop = item.offsetTop - 4;
+      top = firstInGroup ? Math.min(itemTop, Math.max(0, item.offsetTop + item.offsetHeight + 4 - box.clientHeight)) : itemTop;
+    }
+    const smooth = scrolledBefore.current && !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    scrolledBefore.current = true;
+    if (typeof box.scrollTo === "function") box.scrollTo({ top, behavior: smooth ? "smooth" : "auto" });
+    else box.scrollTop = top;
+    // Also after expanding or shrinking: the list's height changed.
+  }, [stepIndex, firstInGroup, expanded]);
 
   return (
     <>
       {/* Base UI portals mount only in the browser, so without this outline the
           bottom 40% would be blank until the page's JavaScript runs. */}
-      <div aria-hidden="true" className={SHEET_CLASS} style={SHEET_STYLE} />
+      <div aria-hidden="true" className={`${SHEET_CLASS} h-[40dvh]`} style={SHEET_STYLE} />
       <Drawer.Root open modal={false} disablePointerDismissal>
         <Drawer.Portal>
           <Drawer.Popup
             initialFocus={false}
             finalFocus={false}
-            className={SHEET_CLASS}
+            className={`${SHEET_CLASS} ${expanded ? "h-[70dvh]" : "h-[40dvh]"}`}
             style={SHEET_STYLE}
           >
             <StageIndicator current={step?.stage ?? null} />
@@ -63,82 +89,122 @@ export function TutorDrawer({ lesson }: { lesson: Lesson }) {
               <Drawer.Title id="tutor-stage" className="text-base font-semibold">
                 {stage ? stage.name : "Solved"}
               </Drawer.Title>
-              <p aria-live="polite" className="text-sm text-zinc-600 tabular-nums dark:text-zinc-400">
-                {finished ? `All ${total} moves played` : `Move ${stepIndex + 1} of ${total}`}
-              </p>
-            </div>
-
-            {/* Scrolls (with a shadow at the cut edge) when the text doesn't fit. */}
-            <div className="scroll-shadows flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
-              <div className="flex items-center gap-4">
-                <p className="min-w-[2.5ch] shrink-0 text-5xl leading-none font-bold tracking-tight [@media(max-height:700px)]:text-4xl">
-                  {step ? (
-                    <>
-                      <span className="sr-only">Next move: </span>
-                      {step.move}
-                    </>
-                  ) : (
-                    <span aria-hidden="true">✓</span>
-                  )}
+              <div className="flex items-center gap-1">
+                <p aria-live="polite" className="text-sm text-zinc-600 tabular-nums dark:text-zinc-400">
+                  {finished ? `All ${total} moves played` : `Move ${stepIndex + 1} of ${total}`}
                 </p>
-                <div className="flex min-w-0 flex-col gap-1">
-                  {phase && (
-                    <p className="text-sm leading-tight font-semibold text-zinc-600 dark:text-zinc-400">
-                      <span className="sr-only">Step: </span>
-                      {phase.name}
-                    </p>
-                  )}
-                  {groupMoves.length > 0 && (
-                    <ol
-                      aria-label={phase ? "Moves in this step" : "Moves in this stage"}
-                      className="flex flex-wrap gap-x-1.5 gap-y-1 text-base font-medium"
+                {onExpandedChange && (
+                  <button
+                    type="button"
+                    aria-label="Show more of the step"
+                    aria-expanded={expanded}
+                    onClick={() => onExpandedChange(!expanded)}
+                    className="-my-3 -mr-2 flex size-11 items-center justify-center rounded-full text-zinc-600 active:bg-zinc-100 dark:text-zinc-400 dark:active:bg-zinc-800"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      className={`size-6 transition-transform ${expanded ? "rotate-180" : ""}`}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2.25}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     >
-                      {groupMoves.map((s) => (
-                        <li
-                          key={s.i}
-                          aria-current={s.i === stepIndex ? "step" : undefined}
-                          className={
-                            s.i === stepIndex
-                              ? "rounded bg-foreground px-1 font-bold text-background"
-                              : s.i < stepIndex
-                                ? "px-1 text-zinc-400 dark:text-zinc-500"
-                                : "px-1"
-                          }
-                        >
-                          {s.move}
-                        </li>
-                      ))}
-                    </ol>
-                  )}
-                </div>
-              </div>
-              <div className="text-base text-zinc-800 dark:text-zinc-200 [@media(max-height:700px)]:text-sm">
-                <Drawer.Description className="inline">
-                  {step
-                    ? (step.explanation ?? stage?.goal)
-                    : "The cube is solved. Step back through any stage to see it again."}
-                </Drawer.Description>
-                {phase && (
-                  <>
-                    {" "}
-                    <button
-                      type="button"
-                      aria-expanded={goalOpen}
-                      aria-controls="tutor-step-goal"
-                      onClick={() => setOpenGoal(goalOpen ? null : (step?.phase ?? null))}
-                      className="inline font-medium whitespace-nowrap text-zinc-600 underline underline-offset-2 dark:text-zinc-400"
-                    >
-                      {goalOpen ? "Hide step goal" : "About this step"}
-                    </button>
-                  </>
+                      <path d="m6 15 6-6 6 6" />
+                    </svg>
+                  </button>
                 )}
               </div>
-              {phase && (
-                <p ref={goalRef} id="tutor-step-goal" hidden={!goalOpen} className="text-sm text-zinc-600 dark:text-zinc-400">
-                  {phase.goal}
-                </p>
-              )}
             </div>
+
+            {step ? (
+              <>
+                {/* The whole step at a glance; stays put while the list below scrolls. */}
+                <ol
+                  aria-label={phase ? "Moves in this step" : "Moves in this stage"}
+                  className="flex flex-wrap gap-x-1.5 gap-y-1 text-base font-medium"
+                >
+                  {groupMoves.map((s) => (
+                    <li
+                      key={s.i}
+                      aria-current={s.i === stepIndex ? "step" : undefined}
+                      className={
+                        s.i === stepIndex
+                          ? "rounded bg-foreground px-1 font-bold text-background"
+                          : s.i < stepIndex
+                            ? "px-1 text-zinc-400 dark:text-zinc-500"
+                            : "px-1"
+                      }
+                    >
+                      {s.move}
+                    </li>
+                  ))}
+                </ol>
+
+                {/* Scrolls (with a shadow at the cut edge) when the text doesn't fit. */}
+                <div
+                  ref={scrollRef}
+                  className="scroll-shadows relative -mx-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2"
+                >
+                  <div className="flex flex-col gap-0.5 text-sm text-zinc-600 dark:text-zinc-400">
+                    {phase && (
+                      <p className="leading-tight font-semibold text-zinc-800 dark:text-zinc-200">
+                        <span className="sr-only">Step: </span>
+                        {phase.name}
+                      </p>
+                    )}
+                    {goal && (
+                      <p>
+                        <span className="font-semibold">Goal: </span>
+                        {goal}
+                      </p>
+                    )}
+                  </div>
+                  <ol aria-label="What each move does" className="flex flex-col gap-1">
+                    {groupMoves.map((s) => {
+                      const current = s.i === stepIndex;
+                      return (
+                        <li
+                          key={s.i}
+                          ref={current ? currentRef : undefined}
+                          aria-current={current ? "step" : undefined}
+                          className={`flex items-start gap-3 rounded-xl px-2 py-1.5 ${
+                            current
+                              ? "bg-zinc-100 dark:bg-zinc-800"
+                              : s.i < stepIndex
+                                ? "text-zinc-500 dark:text-zinc-500"
+                                : ""
+                          }`}
+                        >
+                          <span className="min-w-[2.5ch] shrink-0 text-2xl leading-none font-bold tracking-tight [@media(max-height:700px)]:text-xl">
+                            {current && <span className="sr-only">Next move: </span>}
+                            {s.move}
+                          </span>
+                          {s.explanation &&
+                            (current ? (
+                              <Drawer.Description className="min-w-0 pt-0.5 text-base [@media(max-height:700px)]:text-sm">
+                                {s.explanation}
+                              </Drawer.Description>
+                            ) : (
+                              <p className="min-w-0 pt-0.5 text-base [@media(max-height:700px)]:text-sm">{s.explanation}</p>
+                            ))}
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </div>
+              </>
+            ) : (
+              <div className="flex min-h-0 flex-1 items-start gap-4">
+                <span aria-hidden="true" className="text-5xl leading-none font-bold">
+                  ✓
+                </span>
+                <Drawer.Description className="text-base text-zinc-800 dark:text-zinc-200">
+                  The cube is solved. Step back through any stage to see it again.
+                </Drawer.Description>
+              </div>
+            )}
 
             <div className="grid grid-cols-[1fr_2fr] gap-3">
               <button

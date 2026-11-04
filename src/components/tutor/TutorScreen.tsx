@@ -1,6 +1,6 @@
 "use client";
 // Tutor viewport: cube view in the top 60% of the screen, persistent drawer in
-// the bottom 40%. Both read the same cube store. For signed-in users the solve
+// the bottom 40% (30% / 70% while the drawer is expanded). Both read the same cube store. For signed-in users the solve
 // is saved as a tutoring session as they step through it, and the header's
 // bookmark saves the cube. A continued solve (`resume`) opens at its saved
 // move and keeps writing to the same session.
@@ -48,11 +48,13 @@ export function TutorScreen({
   const [resumeAt] = useState(resume);
   // The cube store starts with the cube held the way the solve holds it.
   const [held] = useState(() => applyMoves(start, lesson.hold ?? []));
+  // The drawer's expand button trades cube room for text: 30/70 instead of 60/40.
+  const [expanded, setExpanded] = useState(false);
   return (
     <CubeStoreProvider initial={held} moves={session.moves} step={resumeAt?.stepsCompleted}>
       <RecordSession session={session} resume={resumeAt} />
       <main className="relative h-dvh overflow-hidden">
-        <section aria-label="Cube" className="flex h-[60dvh] flex-col">
+        <section aria-label="Cube" className={`flex flex-col ${expanded ? "h-[30dvh]" : "h-[60dvh]"}`}>
           <header className="flex min-h-14 items-center justify-between gap-2 px-4 pt-2">
             <Link href="/" className="flex min-h-11 shrink-0 items-center font-semibold">
               Roux Tutor
@@ -74,7 +76,7 @@ export function TutorScreen({
             <CubeView caption={lesson.hold && <HoldHint />} />
           </div>
         </section>
-        <TutorDrawer lesson={lesson} />
+        <TutorDrawer lesson={lesson} expanded={expanded} onExpandedChange={setExpanded} />
       </main>
     </CubeStoreProvider>
   );
