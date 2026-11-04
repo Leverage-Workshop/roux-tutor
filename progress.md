@@ -2,13 +2,17 @@
 
 ## Current State
 
-**Last Updated:** 2026-11-02
-**Active Feature:** feat-017 keep the screen on while the app is open (owner request). Every feature in `feature_list.json` is done
+**Last Updated:** 2026-11-04
+**Active Feature:** feat-019 stage info bubble + beginner corners (owner request). Every feature in `feature_list.json` is done
 
 ## Status
 
 ### What's Done
 
+- [x] 2026-11-04 feat-019 (owner: explain the stages in an info bubble; beginner corners seem easier): info button next to the stage name opens "The Roux method" with a tab per stage. Corners default to beginner two-look CMLL (7 orienting + 2 swap algorithms, ~9 more moves per solve than one-look); the CMLL tab switches to full CMLL (cookie `roux-corners`, Server Action `setCornersMethod`). The switch keeps the user's move inside the blocks. ./init.sh passed, 354/354. Risk: a reload within 15 s of switching jumps to the carried move again (harmless); not tried with a real signed-in session
+- [x] 2026-11-04 feat-018 step list in drawer (owner idea: show the step's moves, then its goal, then every move with its explanation in a list; Next scrolls to the current move). `TutorDrawer` now has fixed move chips, then a scrolling step name + goal + "What each move does" list; the "About this step" toggle and the big single-move display are gone (the current row is highlighted instead). At 40% the list only fits about one explanation, so (owner's pick) a chevron button expands the sheet to 70% and shrinks the cube view to 30%. ./init.sh passed, 348/348. Risk: collapsed on a 320x568 phone the list is ~36px tall; expand to read
+- [x] 2026-11-04 feat-018 follow-up (owner): dropped the "N more turns to ..." / "One more rotation ..." sentences from move explanations (`explanations.ts`); with the goal shown above the list they were noise. ./init.sh passed, 348/348
+- [x] 2026-11-04 feat-018 follow-up (owner): the last-four-edges step is now pointed out as an algorithm like CMLL (goal names the sequence, moves read "starts / move k of n / finishes the 3-cycle algorithm") when it has 3+ moves. Edge orientation and UL/UR stay explained move by move: the solver uses many different sequences per case there, so there is no single algorithm to name. ./init.sh passed, 349/349
 - [x] 2026-11-02 feat-017 keep screen on: `src/lib/wakeLock.ts` + `src/components/KeepScreenOn.tsx` in the root layout hold a screen wake lock while a page is visible; re-asked on show and on the next tap if refused. ./init.sh passed, 347/347. Lock granted in headed Chromium; still to check on a real phone (iOS Safari 16.4+ and Chrome Android support it)
 - [x] 2026-11-02 feat-016 follow-up (owner: after an M, white is no longer the bottom): expected in Roux. Only M and r move centers; the left/right centers never move. `HoldHint` now reads the store (`holdCentersStraight`): "Red front / White bottom" while the middle slice is straight, "Blue left / Green right" + "Blocks: white side down" once it turns. `rouxLesson` adds `centersTurnedNote` to the first move that turns the centers. ./init.sh passed, 341/341
 - [x] 2026-11-02 feat-016 (owner request: tutorials keep the cube still, e.g. red front, blue left, green right, white down): lessons now hold the cube that way for the whole solve. `src/lib/tutor/hold.ts` finds the rotation to the hold (`Lesson.hold`, x2 y for entered cubes), relabels the held cube so the unchanged solver sees its usual frame, and translates color words in the solver's text. The tutor store starts from the held cube; the first block is now blue-white on the left. Hint "Red front / White bottom" and a Reset view button (0.5 s swing back to the starting angle, instant with reduced motion) sit in a row under the cube. `DEMO_SCRAMBLE` is now the white-top scramble of the same demo cube; solver tests use `DEMO_HELD_SCRAMBLE`. ./init.sh passed, 336/336. Unfinished sessions saved before this re-solve to different moves and start over

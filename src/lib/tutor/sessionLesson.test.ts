@@ -3,6 +3,7 @@ import { applyMoves, solvedState, toFacelets } from "@/lib/cube/model";
 import type { TutoringSession } from "@/lib/supabase/tutoringSessions";
 import { DEMO_SCRAMBLE, demoLesson } from "./demoLesson";
 import { stageEnds } from "./lesson";
+import { lessonForCube } from "./cubeLesson";
 import { lessonForSession } from "./sessionLesson";
 
 const DEMO = demoLesson();
@@ -53,5 +54,23 @@ describe("lessonForSession", () => {
 
   it("gives null for a cube that can't be solved", () => {
     expect(lessonForSession(row({ start_facelets: "U".repeat(54) }))).toBeNull();
+  });
+
+  it("continues an unfinished solve saved with the other corners method in that method", () => {
+    // A cube whose corners need a swap after orienting, so the two methods differ.
+    const start = toFacelets(applyMoves(solvedState(), "R U2 R' U2 R' F R F' D2 L"));
+    const full = lessonForCube(start, "full");
+    const beginner = lessonForCube(start, "beginner");
+    if ("error" in full || "error" in beginner) throw new Error("not a cube");
+    const fullMoves = full.lesson.steps.map((s) => s.move);
+    expect(beginner.lesson.steps.map((s) => s.move)).not.toEqual(fullMoves);
+    const saved = row({ start_facelets: start, moves: fullMoves, stage_ends: stageEnds(full.lesson.steps), steps_completed: 3 });
+    const result = lessonForSession(saved, "beginner");
+    expect(result?.lesson.corners).toBe("full");
+    expect(result?.resume?.stepsCompleted).toBe(3);
+    // Finished: starts over with the chosen method.
+    const done = lessonForSession({ ...saved, completed_at: "2026-11-04T12:00:00Z" }, "beginner");
+    expect(done?.lesson.corners).toBe("beginner");
+    expect(done?.resume).toBeUndefined();
   });
 });

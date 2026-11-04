@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { applyMoves, solvedState } from "@/lib/cube/model";
 import { parseAlgorithm, type Move } from "@/lib/cube/notation";
 import { lseBadEdges } from "@/lib/solver/lse";
+import type { CmllMethod } from "@/lib/solver/cmll";
 import { solveRoux } from "@/lib/solver/roux";
 import { DEMO_HELD_SCRAMBLE } from "./demoLesson";
 import { EXPLANATIONS, explain, explainRouxSolution, isFallback, moveHow, type ExplanationKey } from "./explanations";
@@ -27,9 +28,9 @@ function scrambles(count: number, length = 25): string[] {
 }
 
 /** Every move of a scramble's solve with its step, stage and explanation. */
-function explained(scramble: string) {
+function explained(scramble: string, corners: CmllMethod = "full") {
   const start = applyMoves(solvedState(), scramble);
-  const solution = solveRoux(start);
+  const solution = solveRoux(start, { corners });
   const explanations = explainRouxSolution(start, solution);
   let i = 0;
   let state = start;
@@ -57,9 +58,11 @@ describe("explanation dictionary", () => {
   it("gives every move of 240 random solves its own entry (never a fallback), at most 240 characters for a phone screen", () => {
     const used = new Map<ExplanationKey, number>();
     let moves = 0;
-    for (const scramble of scrambles(240)) {
+    // Each scramble with full CMLL and with the beginner's two corner algorithms.
+    for (const [i, scramble] of scrambles(240).entries()) {
+      const corners: CmllMethod = i % 2 === 0 ? "full" : "beginner";
       const start = applyMoves(solvedState(), scramble);
-      const solution = solveRoux(start);
+      const solution = solveRoux(start, { corners });
       const explanations = explainRouxSolution(start, solution);
       expect(explanations, scramble).toHaveLength(solution.moves.length);
       // Entries are keyed by stage first ("fb.join.final").
@@ -102,6 +105,8 @@ describe("explanation dictionary", () => {
       "cmll.alg.breaks",
       "cmll.alg.restores",
       "cmll.alg.end",
+      "cmll.orient.start",
+      "cmll.orient.end",
       "lse.eo.flip",
       "lse.eo.slice",
       "lse.eo.final",
@@ -110,8 +115,10 @@ describe("explanation dictionary", () => {
       "lse.ulur.spot",
       "lse.ulur.final-top",
       "lse.ep.slice",
-      "lse.ep.top",
       "lse.ep.final-slice",
+      "lse.ep.alg-start",
+      "lse.ep.alg-middle",
+      "lse.ep.alg-end",
     ] as const) {
       expect(used.get(key) ?? 0, key).toBeGreaterThan(0);
     }
@@ -150,7 +157,9 @@ describe("explanation dictionary", () => {
       key: "fb.join.final",
       text: "R' joins the yellow-green-orange corner and the green-orange edge: they now sit side by side with matching colors, ready to go in as one piece.",
     });
-    expect(frontJoin[0].text).toContain("3 more turns to join them");
+    expect(frontJoin[0].text).toBe(
+      "U moves the corner to the top front-left and the edge to the top front, side by side but not matching yet.",
+    );
     expect(inStep("front-pair-insert").at(-1)?.text).toBe("F slots the joined pair into the front-left. The first block is complete!");
 
     // Second block: the slot opens, the pair drops in, the bottom-right edge comes back.
@@ -191,8 +200,8 @@ describe("explanation dictionary", () => {
 
     // Second block pair: R U R' undone by opening the slot, moving the pair over it, closing it.
     expect(texts("R U R'")).toEqual([
-      "R turns the front-right slot to the top front-right to meet the pair, which doesn't move. 2 more turns to bring the slot back with the pair in it.",
-      "U' moves the joined pair to the top front-right without splitting it. One more turn to slot it into the front-right.",
+      "R turns the front-right slot to the top front-right to meet the pair, which doesn't move.",
+      "U' moves the joined pair to the top front-right without splitting it.",
       "R' slots the joined pair into the front-right and brings the yellow-red edge and the finished back-right pair back. The second block is complete: both blocks are built!",
     ]);
     expect(texts("R U' R'")[1]).toBe(
@@ -209,15 +218,39 @@ describe("explanation dictionary", () => {
     expect(texts("M' U M U2 M' U M")[1]).toBe(
       "U': with the middle slice a quarter turn off, a quarter turn of the top flips all four top edges between good and bad (2 bad edges before, 4 now).",
     );
-    expect(keys("M2 U2 M2 U2")).toEqual(["lse.ep.top", "lse.ep.slice", "lse.ep.top", "lse.ep.final-slice"]);
+    // Beginner corners: the set's algorithm orients, then an O algorithm swaps.
+    const sune3 = explained("R U2 R' U2 R' F R F'", "beginner");
+    const orient = sune3.filter((m) => m.step.id === "cmll-orient");
+    expect(orient[0].text).toBe(
+      "R (right side up) starts the Sune algorithm, R U R' U R U2 R'. Learn it as one sequence: it turns all four top corners white side up.",
+    );
+    expect(orient.at(-1)?.text).toBe(
+      "R' finishes the Sune algorithm: both blocks are back and all four top corners show white on top. Next, one more algorithm swaps them into place.",
+    );
+    expect(sune3.find((m) => m.step.id === "cmll")?.step.name).toBe("Swap the corners: O Adjacent (Jb perm)");
+    expect(explained("U' F R' F' R U R U' R'", "beginner").filter((m) => m.step.id === "cmll-orient").at(-1)?.text).toBe(
+      "F' finishes the T algorithm: both blocks are back and all four top corners show white on top. They are already in their places, just turned: the top layer gets lined up while solving the edges.",
+    );
+
+    // The last four edges: a fixed algorithm, pointed out like CMLL's.
+    expect(keys("M2 U2 M2 U2")).toEqual(["lse.ep.alg-start", "lse.ep.alg-middle", "lse.ep.alg-middle", "lse.ep.alg-end"]);
+    expect(texts("M' U2 M U2")).toEqual([
+      "U2 (top layer half turn) starts the 3-cycle algorithm, U2 M' U2 M. Learn it as one sequence: it cycles three edges and finishes the cube.",
+      "M' (middle slice up): move 2 of 4 of the 3-cycle algorithm.",
+      "U2 (top layer half turn): move 3 of 4 of the 3-cycle algorithm. It swaps the top front and top back edges.",
+      "M finishes the 3-cycle algorithm: the cube is solved!",
+    ]);
+    expect(texts("M U2 M2 U2 M")[0]).toBe(
+      "M (middle slice down) starts the top-bottom swap algorithm, M U2 M2 U2 M. Learn it as one sequence: it swaps two pairs of edges and finishes the cube.",
+    );
     expect(keys("U")).toEqual(["lse.ulur.final-top"]);
   });
 });
 
 describe("explain", () => {
   it("fills placeholders and refuses to leave one empty", () => {
-    expect(explain("fb.dl-edge.move", { move: "B", pos: "middle back-left", remaining: "One more turn" }).text).toBe(
-      "B moves the yellow-orange edge to the middle back-left. One more turn to drop it into the bottom-left.",
+    expect(explain("fb.dl-edge.move", { move: "B", pos: "middle back-left" }).text).toBe(
+      "B moves the yellow-orange edge to the middle back-left.",
     );
     expect(() => explain("fb.dl-edge.move", { move: "B" })).toThrow(/\{pos\}/);
   });

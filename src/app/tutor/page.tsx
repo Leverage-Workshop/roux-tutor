@@ -1,10 +1,12 @@
 import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { AuthButton } from "@/components/AuthButton";
 import { TutorScreen } from "@/components/tutor/TutorScreen";
 import { createClient } from "@/lib/supabase/server";
 import { getTutoringSession, type SessionSource } from "@/lib/supabase/tutoringSessions";
+import { CORNERS_COOKIE, cornersFromCookie } from "@/lib/tutor/corners";
 import { lessonForCube } from "@/lib/tutor/cubeLesson";
 import { sourceFromParam } from "@/lib/tutor/links";
 import { lessonForSession } from "@/lib/tutor/sessionLesson";
@@ -25,7 +27,8 @@ export const viewport: Viewport = {
 // the facelet editor (`&from=scan` when it was scanned); without it the page
 // plays the demo scramble. `/tutor?session=<id>` continues one of the
 // signed-in user's saved solves (the tutor switches to this link once a solve
-// is saved, so a refresh continues it too).
+// is saved, so a refresh continues it too). The `roux-corners` cookie picks
+// the beginner's or the full way to solve the top corners (see corners.ts).
 export default function TutorPage({ searchParams }: PageProps<"/tutor">) {
   return (
     <Suspense fallback={<SolvingScreen />}>
@@ -40,11 +43,15 @@ export default function TutorPage({ searchParams }: PageProps<"/tutor">) {
   );
 }
 
+async function cornersSetting() {
+  return cornersFromCookie((await cookies()).get(CORNERS_COOKIE)?.value);
+}
+
 // Reads the session cookie, so only this branch is per-user.
 async function TutorForSession({ id }: { id: string }) {
   const supabase = await createClient();
   const row = supabase ? await getTutoringSession(supabase, id).catch(() => null) : null;
-  const result = row && lessonForSession(row);
+  const result = row && lessonForSession(row, await cornersSetting());
   if (!result) {
     return (
       <Message
@@ -56,7 +63,7 @@ async function TutorForSession({ id }: { id: string }) {
   }
   return (
     <TutorScreen
-      key={result.resume?.id ?? result.lesson.start}
+      key={`${result.resume?.id ?? result.lesson.start}-${result.lesson.corners}`}
       lesson={result.lesson}
       source={result.source}
       resume={result.resume}
@@ -64,12 +71,14 @@ async function TutorForSession({ id }: { id: string }) {
   );
 }
 
-function TutorForCube({ cube, source }: { cube: string | string[] | undefined; source?: SessionSource }) {
-  const result = lessonForCube(cube);
+async function TutorForCube({ cube, source }: { cube: string | string[] | undefined; source?: SessionSource }) {
+  const result = lessonForCube(cube, await cornersSetting());
   if ("error" in result) {
     return <Message title="This cube can't be solved" text={result.error} editHref={result.editHref} />;
   }
-  return <TutorScreen key={result.lesson.start ?? "demo"} lesson={result.lesson} source={source} />;
+  return (
+    <TutorScreen key={`${result.lesson.start ?? "demo"}-${result.lesson.corners}`} lesson={result.lesson} source={source} />
+  );
 }
 
 // The static shell, shown while the server works out the solve (a few

@@ -13,26 +13,28 @@
 // server (at build time for /tutor); the solver never ships to the browser.
 import { applyMoves, solvedState, toFacelets, type CubeState } from "@/lib/cube/model";
 import { toMoves, type Move } from "@/lib/cube/notation";
+import type { CmllMethod } from "@/lib/solver/cmll";
 import { solveRoux } from "@/lib/solver/roux";
+import { DEFAULT_CORNERS } from "./corners";
 import { explainRouxSolution } from "./explanations";
 import { centersTurnedNote, holdColors, holdRotation, solverView } from "./hold";
 import type { Lesson, LessonPhase, TutorStep } from "./lesson";
 
 /** The lesson for a scrambled cube. */
-export function rouxLesson(scramble: string | readonly Move[]): Lesson {
+export function rouxLesson(scramble: string | readonly Move[], corners: CmllMethod = DEFAULT_CORNERS): Lesson {
   const moves = toMoves(scramble);
-  return { ...solveLesson(applyMoves(solvedState(), moves)), scramble: moves };
+  return { ...solveLesson(applyMoves(solvedState(), moves), corners), scramble: moves };
 }
 
 /** The lesson for a cube entered sticker by sticker (a legal state, see validate.ts). */
-export function rouxLessonFromState(start: CubeState): Lesson {
-  return { ...solveLesson(start), scramble: [], start: toFacelets(start) };
+export function rouxLessonFromState(start: CubeState, corners: CmllMethod = DEFAULT_CORNERS): Lesson {
+  return { ...solveLesson(start, corners), scramble: [], start: toFacelets(start) };
 }
 
-function solveLesson(start: CubeState): Omit<Lesson, "scramble"> {
+function solveLesson(start: CubeState, corners: CmllMethod): Omit<Lesson, "scramble"> {
   const hold = holdRotation(start);
   const view = solverView(applyMoves(start, hold));
-  const solution = solveRoux(view);
+  const solution = solveRoux(view, { corners });
   const explanations = explainRouxSolution(view, solution);
 
   const phases: LessonPhase[] = [];
@@ -55,5 +57,5 @@ function solveLesson(start: CubeState): Omit<Lesson, "scramble"> {
       }
     }
   }
-  return { hold, steps, phases };
+  return { hold, steps, phases, corners };
 }

@@ -25,7 +25,7 @@
 //
 // Recognition notes are worked out from the case itself (see describeCase),
 // so they always match the algorithm's starting position.
-import { solvedState, applyMoves, toFacelets } from "@/lib/cube/model";
+import { solvedState, applyMoves, toFacelets, type CubeState } from "@/lib/cube/model";
 import { invertAlgorithm, parseAlgorithm, type Move } from "@/lib/cube/notation";
 
 export type CmllSet = "O" | "H" | "Pi" | "U" | "T" | "S" | "AS" | "L";
@@ -241,6 +241,11 @@ function buildCases(): CmllCase[] {
     ...(nickname ? { nickname } : {}),
     recognition: describeCase(view(toFacelets(start), i), views),
   }));
+}
+
+/** Where the top color faces on each top corner, e.g. "Top color: on top at back-left; facing front at ...". */
+export function topColorText(state: CubeState): string {
+  return topText(view(toFacelets(state), -1).top);
 }
 
 let cases: CmllCase[] | undefined;

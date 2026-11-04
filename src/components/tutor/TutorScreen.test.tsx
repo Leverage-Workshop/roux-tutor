@@ -5,7 +5,14 @@ import { demoLesson } from "@/lib/tutor/demoLesson";
 import { createLesson, type Lesson } from "@/lib/tutor/lesson";
 import { TutorScreen } from "./TutorScreen";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+const { router, setCornersMethod } = vi.hoisted(() => ({
+  router: { refresh: () => {}, replace: (href: string) => void href },
+  setCornersMethod: { calls: [] as string[] },
+}));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
+vi.mock("@/app/tutor/actions", () => ({
+  setCornersMethod: async (method: string) => void setCornersMethod.calls.push(method),
+}));
 
 // jsdom has no WebGL, so the cube view shows the flat net (CubeView's fallback),
 // which these tests read stickers from. Stubbing getContext skips jsdom's
@@ -119,35 +126,63 @@ describe("TutorScreen", () => {
     expect(screen.getByText("Move 2 of 3")).toBeDefined();
   });
 
-  it("shows the current move's explanation, its step's name and goal, and updates them on Next and Back", () => {
+  it("lists every move of the current step with its explanation under the step's goal, following Next and Back", () => {
     const ui = setup(EXPLAINED);
-    expect(screen.getByText("R explains the first move.")).toBeDefined();
+    const explained = () =>
+      within(screen.getByRole("list", { name: "What each move does" }))
+        .getAllByRole("listitem")
+        .map((li) => [li.textContent, li.getAttribute("aria-current")]);
     expect(screen.getByText("Bottom-left edge")).toBeDefined();
+    expect(screen.getByText("Put the yellow-orange edge in the bottom-left slot.")).toBeDefined();
     expect(screen.queryByText(/1x2x3 block on the left/)).toBeNull();
-    // The step's goal opens from "About this step" and closes again when the next step starts.
-    const goal = () => screen.getByText("Put the yellow-orange edge in the bottom-left slot.");
-    expect(goal().hidden).toBe(true);
-    act(() => fireEvent.click(screen.getByRole("button", { name: "About this step" })));
-    expect(goal().hidden).toBe(false);
-    expect(screen.getByRole("button", { name: "Hide step goal" }).getAttribute("aria-expanded")).toBe("true");
-    // The dialog's description is the explanation, for screen readers.
-    const describedBy = screen.getByRole("dialog").getAttribute("aria-describedby");
-    expect(document.getElementById(describedBy ?? "")?.textContent).toBe("R explains the first move.");
+    expect(explained()).toEqual([["Next move: RR explains the first move.", "step"]]);
+    // The dialog's description is the current move's explanation, for screen readers.
+    const description = () =>
+      document.getElementById(screen.getByRole("dialog").getAttribute("aria-describedby") ?? "")?.textContent;
+    expect(description()).toBe("R explains the first move.");
 
     ui.next();
-    expect(screen.getByText("U explains the second move.")).toBeDefined();
-    expect(screen.getByText("Put the yellow-red edge in the bottom-right slot.").hidden).toBe(true);
-    expect(screen.queryByText("R explains the first move.")).toBeNull();
     expect(screen.getByText("Bottom-right edge")).toBeDefined();
+    expect(screen.getByText("Put the yellow-red edge in the bottom-right slot.")).toBeDefined();
+    expect(screen.queryByText("R explains the first move.")).toBeNull();
+    // The whole step is listed at once, the current move marked.
+    expect(explained()).toEqual([
+      ["Next move: UU explains the second move.", "step"],
+      ["R'R' explains the third move.", null],
+    ]);
+    expect(description()).toBe("U explains the second move.");
     const moves = within(screen.getByRole("list", { name: "Moves in this step" })).getAllByRole("listitem");
     expect(moves.map((m) => m.textContent)).toEqual(["U", "R'"]);
 
     ui.next();
-    expect(screen.getByText("R' explains the third move.")).toBeDefined();
+    expect(explained()).toEqual([
+      ["UU explains the second move.", null],
+      ["Next move: R'R' explains the third move.", "step"],
+    ]);
+    expect(description()).toBe("R' explains the third move.");
     ui.back();
     ui.back();
-    expect(screen.getByText("R explains the first move.")).toBeDefined();
+    expect(explained()).toEqual([["Next move: RR explains the first move.", "step"]]);
     expect(within(screen.getByRole("list", { name: "Moves in this step" })).getAllByRole("listitem")).toHaveLength(1);
+  });
+
+  it("expands the sheet to 70% of the screen, shrinking the cube view, and back", () => {
+    setup(EXPLAINED);
+    const expand = screen.getByRole("button", { name: "Show more of the step" });
+    const sheet = screen.getByRole("dialog");
+    const cube = screen.getByRole("region", { name: "Cube" });
+    expect(expand.getAttribute("aria-expanded")).toBe("false");
+    expect(sheet.className).toContain("h-[40dvh]");
+    expect(cube.className).toContain("h-[60dvh]");
+
+    act(() => fireEvent.click(expand));
+    expect(expand.getAttribute("aria-expanded")).toBe("true");
+    expect(sheet.className).toContain("h-[70dvh]");
+    expect(cube.className).toContain("h-[30dvh]");
+
+    act(() => fireEvent.click(expand));
+    expect(sheet.className).toContain("h-[40dvh]");
+    expect(cube.className).toContain("h-[60dvh]");
   });
 
   it("plays the solver's demo lesson, explaining every move, to a solved cube", () => {
@@ -200,5 +235,38 @@ describe("TutorScreen", () => {
     expect(screen.getByText("Blocks: white side down")).toBeDefined();
     ui.back();
     expect(screen.getByText("Hold the cube: Red in front, white on the bottom.")).toBeDefined();
+  });
+
+  it("explains each Roux stage in an info bubble, opened on the current stage", () => {
+    const ui = setup(demoLesson());
+    act(() => fireEvent.click(screen.getByRole("button", { name: "About the Roux stages" })));
+    const bubble = screen.getByRole("dialog", { name: "The Roux method" });
+    const tabs = within(bubble).getAllByRole("tab");
+    expect(tabs.map((t) => t.textContent)).toEqual(["FB (current)", "SB", "CMLL", "LSE"]);
+    expect(tabs[0].getAttribute("aria-selected")).toBe("true");
+    expect(within(bubble).getByText(/Build a 1×2×3 block on the left/)).toBeDefined();
+    act(() => fireEvent.click(tabs[3]));
+    expect(within(bubble).getByText(/Solve the middle slice:/)).toBeDefined();
+    act(() => fireEvent.click(tabs[2]));
+    const choice = within(bubble).getByRole("radiogroup", { name: "How this tutor solves the corners" });
+    expect(within(choice).getByRole("radio", { name: /Beginner: two algorithms/ }).getAttribute("aria-checked")).toBe("true");
+    expect(ui.stages()).toEqual(["FB (current)", "SB", "CMLL", "LSE"]);
+  });
+
+  it("switches the corners to full CMLL: saves the choice, reloads the solve, keeps the place in the blocks", async () => {
+    const replace = vi.spyOn(router, "replace");
+    setCornersMethod.calls = [];
+    const lesson = demoLesson();
+    const ui = setup(lesson);
+    for (let i = 0; i < 5; i++) ui.next();
+    act(() => fireEvent.click(screen.getByRole("button", { name: "About the Roux stages" })));
+    act(() => fireEvent.click(screen.getByRole("tab", { name: "CMLL" })));
+    await act(async () => fireEvent.click(screen.getByRole("radio", { name: /Full CMLL: one algorithm/ })));
+    expect(setCornersMethod.calls).toEqual(["full"]);
+    expect(replace).toHaveBeenCalledWith("/tutor");
+    // The re-solved lesson opens at the same move (still in the blocks).
+    cleanup();
+    render(<TutorScreen key="full" lesson={{ ...lesson, corners: "full" }} />);
+    expect(screen.getByText(`Move 6 of ${lesson.steps.length}`)).toBeDefined();
   });
 });

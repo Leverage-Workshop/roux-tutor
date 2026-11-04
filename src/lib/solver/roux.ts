@@ -11,7 +11,7 @@ import type { CubeState } from "cubejs";
 import { applyMoves } from "@/lib/cube/model";
 import type { Move } from "@/lib/cube/notation";
 import type { RouxStageId } from "@/lib/tutor/lesson";
-import { solveThroughCmll, type CmllSolution, type CmllStep } from "./cmll";
+import { solveThroughCmll, type CmllMethod, type CmllSolution, type CmllStep } from "./cmll";
 import type { FirstBlockStepId, SolveStep } from "./firstBlock";
 import { solveLse, type LseSolution, type LseStep } from "./lse";
 import type { SecondBlockStepId } from "./secondBlock";
@@ -55,9 +55,11 @@ interface Ending {
  * Solve any real cube position the Roux way. The solve starts with a
  * whole-cube rotation when needed (orange left, yellow down) and ends with
  * every piece and center solved in that orientation (see isLseSolved).
+ * `corners` picks full CMLL (one algorithm, the default here) or the
+ * beginner's two (see cmll.ts).
  */
-export function solveRoux(state: CubeState): RouxSolution {
-  const { firstBlock, secondBlock, cmll } = solveThroughCmll(state);
+export function solveRoux(state: CubeState, { corners = "full" }: { corners?: CmllMethod } = {}): RouxSolution {
+  const { firstBlock, secondBlock, cmll } = solveThroughCmll(state, corners);
   const blockMoves = [...firstBlock.moves, ...secondBlock.moves];
 
   const ending = (c: CmllSolution): Ending => {

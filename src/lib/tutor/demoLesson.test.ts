@@ -100,7 +100,9 @@ describe("demo lesson", () => {
   it("is the Roux solver's solve of the demo scramble, with every move explained", () => {
     expect(DEMO_LESSON.scramble).toEqual(parseAlgorithm(DEMO_SCRAMBLE));
     // The solver sees the held cube.
-    const solution = solveRoux(applyMoves(solvedState(), DEMO_HELD_SCRAMBLE));
+    // Beginner corners by default (see corners.ts).
+    expect(DEMO_LESSON.corners).toBe("beginner");
+    const solution = solveRoux(applyMoves(solvedState(), DEMO_HELD_SCRAMBLE), { corners: "beginner" });
     expect(DEMO_LESSON.steps.map((s) => s.move)).toEqual(solution.moves);
     expect(DEMO_LESSON.phases?.map((p) => p.id)).toEqual(solution.stages.flatMap((s) => s.steps.map((step) => step.id)));
     for (const step of DEMO_LESSON.steps) {
@@ -120,7 +122,13 @@ describe("demo lesson", () => {
     for (const id of ["dl-edge", "back-pair-free", "front-pair-join", "front-pair-insert", "dr-edge", "front-right-pair-free"]) {
       expect(ids.has(id), id).toBe(true);
     }
-    for (const id of ["cmll-pre-auf", "cmll", "lse-eo", "lse-ulur", "lse-ep"]) expect(ids.has(id), id).toBe(true);
+    for (const id of ["cmll-orient-pre-auf", "cmll-orient", "lse-eo", "lse-ulur", "lse-ep"]) expect(ids.has(id), id).toBe(true);
+    // Full CMLL names the case instead; this Anti-Sune needs no swap, so the moves are the same.
+    const full = demoLesson("full");
+    expect(full.corners).toBe("full");
+    const fullIds = new Set(full.phases!.map((p) => p.id));
+    for (const id of ["cmll-pre-auf", "cmll"]) expect(fullIds.has(id), id).toBe(true);
+    expect(full.steps.map((s) => s.move)).toEqual(DEMO_LESSON.steps.map((s) => s.move));
   });
 
   it("builds the second block with only R, r, U and M, and LSE with only U and M", () => {

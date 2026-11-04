@@ -8,6 +8,14 @@
 // After CMLL the corners are fully solved relative to the blocks, so LSE only
 // has the six edges and the middle-slice centers left.
 //
+// The beginner method ("two-look CMLL", the default in the tutor) splits this
+// in two algorithms with 9 to learn instead of 42:
+//   1. orient: one algorithm per set (Sune, Anti-Sune, H, Pi, U, T, L) turns
+//      every top corner top color up, after a pre-AUF. Cases in a set share
+//      their twist pattern, so the set's algorithm orients all of them
+//   2. then the corners are an O case (or solved): the usual steps above
+//      with O Adjacent or O Diagonal
+//
 // Cases are recognized from the corners alone, relative to the blocks (the
 // left and right centers and the bottom layer), never from the top center:
 // after the blocks the middle slice is often turned. Recognition is a table
@@ -17,13 +25,20 @@ import type { CubeState } from "cubejs";
 import { applyMoves, solvedState } from "@/lib/cube/model";
 import { invertAlgorithm, type Move } from "@/lib/cube/notation";
 import { best, isFirstBlockSolved, type FirstBlockSolution, type SolveStep } from "./firstBlock";
-import { CMLL_SETS, cmllCases, type CmllCase } from "./cmllCases";
+import { CMLL_SETS, cmllCases, topColorText, type CmllCase, type CmllSet } from "./cmllCases";
 import { isSecondBlockSolved, solveBlocks, type SecondBlockSolution } from "./secondBlock";
 
-export type CmllStepId = "cmll-pre-auf" | "cmll" | "cmll-post-auf";
+export type CmllStepId = "cmll-orient-pre-auf" | "cmll-orient" | "cmll-pre-auf" | "cmll" | "cmll-post-auf";
+
+/** "full": one algorithm out of 42 (CMLL). "beginner": orient, then swap (9 algorithms). */
+export type CmllMethod = "full" | "beginner";
 
 export interface CmllStep extends SolveStep<CmllStepId> {
-  /** On the "cmll" step: the case and its algorithm. */
+  /**
+   * On the "cmll" step: the case and its algorithm. On the beginner's
+   * "cmll-orient" and "cmll-orient-pre-auf" steps: the set's orienting
+   * algorithm (named after one case of the set).
+   */
   case?: CmllCase;
 }
 
@@ -101,7 +116,12 @@ export function cmllStateCount(): number {
 const CENTERS_NOTE =
   " The top center may show another color right now (the middle slice is turned): go by the corners and the blocks, not the centers.";
 
-function stepText(id: CmllStepId, plan: Plan, centersOff: boolean): { name: string; goal: string } {
+function stepText(
+  id: Exclude<CmllStepId, "cmll-orient-pre-auf" | "cmll-orient">,
+  plan: Plan,
+  centersOff: boolean,
+  method: CmllMethod,
+): { name: string; goal: string } {
   const note = centersOff ? CENTERS_NOTE : "";
   switch (id) {
     case "cmll-pre-auf": {
@@ -114,6 +134,15 @@ function stepText(id: CmllStepId, plan: Plan, centersOff: boolean): { name: stri
     case "cmll": {
       const c = plan.case!;
       const label = CMLL_SETS[c.set].label;
+      if (method === "beginner") {
+        return {
+          name: `Swap the corners: ${c.name}${c.nickname ? ` (${c.nickname})` : ""}`,
+          goal:
+            `Move the four top corners to their places with one algorithm: ${c.alg}. All four already show the top color (white) on top; ${c.set === "O" && c.id === "o-diagonal" ? "two diagonal corners need to swap" : "two neighboring corners need to swap"}. ${c.recognition}` +
+            " Both blocks end exactly where they were; the middle edges and centers may move, and get solved last." +
+            (plan.pre.length === 0 ? note : ""),
+        };
+      }
       return {
         name: `CMLL: ${label} case (${c.name}${c.nickname && c.nickname !== label ? `, ${c.nickname}` : ""})`,
         goal:
@@ -136,28 +165,98 @@ function stepText(id: CmllStepId, plan: Plan, centersOff: boolean): { name: stri
 }
 
 /**
+ * The beginner's orienting algorithm for each set (one case's algorithm from
+ * the table): the most common ones on two-look CMLL sheets.
+ */
+const ORIENT_CASES: Record<Exclude<CmllSet, "O">, string> = {
+  S: "s-1", // Sune
+  AS: "as-1", // Anti-Sune
+  H: "h-1",
+  Pi: "pi-1",
+  U: "u-6", // F R U R' U' F'
+  T: "t-1",
+  L: "l-2",
+};
+
+/** The beginner's 9 algorithms: 7 to orient, then O Adjacent and O Diagonal. */
+export function beginnerCmllCases(): readonly CmllCase[] {
+  const ids = new Set([...Object.values(ORIENT_CASES), "o-adjacent", "o-diagonal"]);
+  return cmllCases().filter((c) => ids.has(c.id));
+}
+
+const topOriented = (state: CubeState) => TOP_CORNERS.every((i) => state.co[i] === 0);
+
+/**
  * Solve the four top corners of a cube whose blocks are both built (as left
  * by solveBlocks: orange left, yellow down; the middle slice may be turned).
  * Both blocks end solved; the six LSE edges and the middle-slice centers may
- * move.
+ * move. `method` picks one algorithm (full CMLL) or the beginner's two.
  */
-export function solveCmll(state: CubeState): CmllSolution {
+export function solveCmll(state: CubeState, method: CmllMethod = "full"): CmllSolution {
   if (!isFirstBlockSolved(state) || !isSecondBlockSolved(state)) {
     throw new Error("Both blocks must be solved before CMLL");
   }
+  if (method === "beginner" && !topOriented(state)) return solveBeginner(state);
+  return solveOneLook(state, method);
+}
+
+/** Orient with the set's algorithm, then finish as an O case (or just an AUF). */
+function solveBeginner(state: CubeState): CmllSolution {
+  const orientCases = Object.values(ORIENT_CASES).map((id) => cmllCases().find((c) => c.id === id)!);
+  const options = orientCases.flatMap((c) =>
+    AUFS.flatMap((pre) => {
+      const oriented = applyMoves(state, [...pre, ...c.moves]);
+      if (!topOriented(oriented)) return [];
+      const rest = solveOneLook(oriented, "beginner");
+      return [{ pre, case: c, rest, moves: [...pre, ...c.moves, ...rest.moves] }];
+    }),
+  );
+  if (options.length === 0) throw new Error("No orienting algorithm fits these corners");
+  const plan = best(options);
+  const c = plan.case;
+  const label = CMLL_SETS[c.set].label;
+  const centersOff = M_CENTERS.some((i) => state.center[i] !== i);
+  const note = centersOff ? CENTERS_NOTE : "";
+  const steps: CmllStep[] = [];
+  if (plan.pre.length > 0) {
+    steps.push({
+      id: "cmll-orient-pre-auf",
+      name: "Line up the corner twist",
+      goal: `Turn the top layer so the ${label} pattern sits the way its algorithm starts. Only the top layer moves; both blocks stay put.${note}`,
+      moves: plan.pre,
+      case: c,
+    });
+  }
+  const seen = applyMoves(state, plan.pre);
+  steps.push({
+    id: "cmll-orient",
+    name: `Twist the corners: ${label}`,
+    goal:
+      `Turn all four top corners top color (white) up with one algorithm: ${c.alg}. ${label} pattern: ${CMLL_SETS[c.set].shape}. ${topColorText(seen)}` +
+      " The corners may still sit in the wrong places; the next algorithm swaps them. Both blocks end exactly where they were; the middle edges and centers may move, and get solved last." +
+      (plan.pre.length === 0 ? note : ""),
+    moves: c.moves,
+    case: c,
+  });
+  steps.push(...plan.rest.steps);
+  return { moves: steps.flatMap((s) => s.moves), steps, case: plan.rest.case ?? c };
+}
+
+function solveOneLook(state: CubeState, method: CmllMethod): CmllSolution {
   const key = cornerKey(state);
   if (key === SOLVED_KEY) return { moves: [], steps: [], case: null };
   const plan = getPlans().get(key);
   if (!plan) throw new Error("Impossible top-corner state");
   const centersOff = M_CENTERS.some((i) => state.center[i] !== i);
 
-  const step = (id: CmllStepId, moves: Move[]): CmllStep => ({
+  type OneLookId = Exclude<CmllStepId, "cmll-orient-pre-auf" | "cmll-orient">;
+  const step = (id: OneLookId, moves: Move[]): CmllStep => ({
     id,
-    ...stepText(id, plan, centersOff),
+    ...stepText(id, plan, centersOff, method),
     moves,
     ...(id === "cmll" && plan.case ? { case: plan.case } : {}),
   });
-  const parts: [CmllStepId, Move[]][] = [
+  const parts: [OneLookId, Move[]][] = [
     ["cmll-pre-auf", plan.pre],
     ["cmll", plan.case?.moves ?? []],
     ["cmll-post-auf", plan.post],
@@ -175,9 +274,9 @@ export interface ThroughCmllSolution {
 }
 
 /** First block, second block, then CMLL: everything before LSE. */
-export function solveThroughCmll(state: CubeState): ThroughCmllSolution {
+export function solveThroughCmll(state: CubeState, method: CmllMethod = "full"): ThroughCmllSolution {
   const blocks = solveBlocks(state);
-  const cmll = solveCmll(applyMoves(state, blocks.moves));
+  const cmll = solveCmll(applyMoves(state, blocks.moves), method);
   return {
     moves: [...blocks.moves, ...cmll.moves],
     firstBlock: blocks.firstBlock,
