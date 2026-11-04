@@ -150,7 +150,9 @@ describe("explanation dictionary", () => {
       key: "fb.join.final",
       text: "R' joins the yellow-green-orange corner and the green-orange edge: they now sit side by side with matching colors, ready to go in as one piece.",
     });
-    expect(frontJoin[0].text).toContain("3 more turns to join them");
+    expect(frontJoin[0].text).toBe(
+      "U moves the corner to the top front-left and the edge to the top front, side by side but not matching yet.",
+    );
     expect(inStep("front-pair-insert").at(-1)?.text).toBe("F slots the joined pair into the front-left. The first block is complete!");
 
     // Second block: the slot opens, the pair drops in, the bottom-right edge comes back.
@@ -191,8 +193,8 @@ describe("explanation dictionary", () => {
 
     // Second block pair: R U R' undone by opening the slot, moving the pair over it, closing it.
     expect(texts("R U R'")).toEqual([
-      "R turns the front-right slot to the top front-right to meet the pair, which doesn't move. 2 more turns to bring the slot back with the pair in it.",
-      "U' moves the joined pair to the top front-right without splitting it. One more turn to slot it into the front-right.",
+      "R turns the front-right slot to the top front-right to meet the pair, which doesn't move.",
+      "U' moves the joined pair to the top front-right without splitting it.",
       "R' slots the joined pair into the front-right and brings the yellow-red edge and the finished back-right pair back. The second block is complete: both blocks are built!",
     ]);
     expect(texts("R U' R'")[1]).toBe(
@@ -216,8 +218,8 @@ describe("explanation dictionary", () => {
 
 describe("explain", () => {
   it("fills placeholders and refuses to leave one empty", () => {
-    expect(explain("fb.dl-edge.move", { move: "B", pos: "middle back-left", remaining: "One more turn" }).text).toBe(
-      "B moves the yellow-orange edge to the middle back-left. One more turn to drop it into the bottom-left.",
+    expect(explain("fb.dl-edge.move", { move: "B", pos: "middle back-left" }).text).toBe(
+      "B moves the yellow-orange edge to the middle back-left.",
     );
     expect(() => explain("fb.dl-edge.move", { move: "B" })).toThrow(/\{pos\}/);
   });

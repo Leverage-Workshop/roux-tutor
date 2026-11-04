@@ -33,13 +33,13 @@ export const EXPLANATIONS = {
   // --- First block -----------------------------------------------------------
   "fb.orient.final":
     "{move} turns the whole cube so orange faces left and yellow faces down, the way this solve holds it. Rotations move no pieces, only your view.",
-  "fb.orient.yellow-down": "{move} turns the whole cube so yellow faces down. One more rotation brings orange to the left.",
-  "fb.orient.orange-left": "{move} turns the whole cube so orange faces left. One more rotation brings yellow to the bottom.",
+  "fb.orient.yellow-down": "{move} turns the whole cube so yellow faces down.",
+  "fb.orient.orange-left": "{move} turns the whole cube so orange faces left.",
   "fb.orient.partway": "{move} is the first of two whole-cube turns that bring orange to the left and yellow to the bottom.",
 
   "fb.dl-edge.place":
     "{move} drops the yellow-orange edge into the bottom-left, orange against the orange center. The first block is built around it.",
-  "fb.dl-edge.move": "{move} moves the yellow-orange edge to the {pos}. {remaining} to drop it into the bottom-left.",
+  "fb.dl-edge.move": "{move} moves the yellow-orange edge to the {pos}.",
   "fb.dl-edge.other": "{move} sets up the yellow-orange edge for the bottom-left.",
 
   "fb.free.lift": "{move} gets the {piece} out of the {from}, where it was stuck: U, R, r and M can't reach the left side.{also}",
@@ -52,23 +52,23 @@ export const EXPLANATIONS = {
 
   "fb.join.final":
     "{move} joins the {corner} corner and the {edge} edge: they now sit side by side with matching colors, ready to go in as one piece.",
-  "fb.join.corner": "{move} moves the {corner} corner to the {pos}{near}. {remaining} to join it with its edge.",
-  "fb.join.edge": "{move} moves the {edge} edge to the {pos}{near}. {remaining} to join it with its corner.",
-  "fb.join.both": "{move} moves the corner to the {cpos} and the edge to the {epos}{near}. {remaining} to join them.",
+  "fb.join.corner": "{move} moves the {corner} corner to the {pos}{near}.",
+  "fb.join.edge": "{move} moves the {edge} edge to the {pos}{near}.",
+  "fb.join.both": "{move} moves the corner to the {cpos} and the edge to the {epos}{near}.",
   "fb.join.other": "{move} sets up joining the {corner} corner and the {edge} edge.",
 
   "fb.insert.final": "{move} slots the joined pair into the {slot}{also}.{done}",
-  "fb.insert.carry": "{move} moves the joined pair to the {pos} without splitting it. {remaining} to slot it into the {slot}.",
+  "fb.insert.carry": "{move} moves the joined pair to the {pos} without splitting it.",
   "fb.insert.carry-lift":
     "{move} moves the joined pair to the {pos} without splitting it. It also lifts {kept}; this step puts {them} back.",
   "fb.insert.open":
-    "{move} turns the {slot} slot to the {pos} to meet the pair, which doesn't move. {remaining} to bring the slot back with the pair in it.",
+    "{move} turns the {slot} slot to the {pos} to meet the pair, which doesn't move.",
   "fb.insert.other": "{move} lines the pair up with the {slot} slot.",
 
   // --- Second block ----------------------------------------------------------
   "sb.dr-edge.place":
     "{move} drops the yellow-red edge into the bottom-right, red against the red center and yellow on the bottom like the left block.",
-  "sb.dr-edge.move": "{move} moves the yellow-red edge to the {pos}. {remaining} to drop it into the bottom-right.",
+  "sb.dr-edge.move": "{move} moves the yellow-red edge to the {pos}.",
   "sb.dr-edge.other": "{move} sets up the yellow-red edge for the bottom-right.",
 
   "sb.free.lift": "{move} lifts the {piece} out of the {from}, where it was stuck, so it can move freely.{also}",
@@ -81,9 +81,9 @@ export const EXPLANATIONS = {
 
   "sb.join.final":
     "{move} joins the {corner} corner and the {edge} edge in the top layer: side by side with matching colors, ready to go in as one piece.",
-  "sb.join.corner": "{move} moves the {corner} corner to the {pos}{near}. {remaining} to join it with its edge.{lift}",
-  "sb.join.edge": "{move} moves the {edge} edge to the {pos}{near}. {remaining} to join it with its corner.{lift}",
-  "sb.join.both": "{move} moves the corner to the {cpos} and the edge to the {epos}{near}. {remaining} to join them.{lift}",
+  "sb.join.corner": "{move} moves the {corner} corner to the {pos}{near}.{lift}",
+  "sb.join.edge": "{move} moves the {edge} edge to the {pos}{near}.{lift}",
+  "sb.join.both": "{move} moves the corner to the {cpos} and the edge to the {epos}{near}.{lift}",
   "sb.join.restore": "{move} puts {kept} back in place, leaving the pair pieces where they are.",
   "sb.join.lift-carry":
     "{move} turns the right side ahead of time, lifting {kept}. When {back} turns it back, it carries a pair piece along and puts {them} back.",
@@ -91,11 +91,11 @@ export const EXPLANATIONS = {
   "sb.join.other": "{move} sets up joining the {corner} corner and the {edge} edge.",
 
   "sb.insert.final": "{move} slots the joined pair into the {slot}{also}.{done}",
-  "sb.insert.carry": "{move} moves the joined pair to the {pos} without splitting it. {remaining} to slot it into the {slot}.",
+  "sb.insert.carry": "{move} moves the joined pair to the {pos} without splitting it.",
   "sb.insert.carry-lift":
     "{move} moves the joined pair to the {pos} without splitting it. It also lifts {kept}; this step puts {them} back.",
   "sb.insert.open":
-    "{move} turns the {slot} slot to the {pos} to meet the pair, which doesn't move. {remaining} to bring the slot back with the pair in it.",
+    "{move} turns the {slot} slot to the {pos} to meet the pair, which doesn't move.",
   "sb.insert.slice":
     "{move} turns only the middle slice: the pair and its slot stay put. It readies the middle layer for the wide {wide} turn coming up, which turns that slice too.",
   "sb.insert.other": "{move} lines the pair up with the {slot} slot.",
@@ -255,7 +255,6 @@ export function moveHow(move: Move): string {
   return move.endsWith("'") ? how[1] : how[0];
 }
 
-const remaining = (left: number) => (left === 1 ? "One more turn" : `${left} more turns`);
 const list = (items: readonly string[]) =>
   items.length <= 1 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 
@@ -360,7 +359,7 @@ function explainBottomEdge(block: Block, c: MoveContext<unknown>): MoveExplanati
   const { move, before, after, k, n } = c;
   if (k === n && isHome(after, block.bottom)) return explain(keys[0], { move });
   if (moved(before, after, block.bottom)) {
-    return explain(keys[1], { move, pos: posName(after, block.bottom), remaining: remaining(n - k) });
+    return explain(keys[1], { move, pos: posName(after, block.bottom) });
   }
   return explain(keys[2], { move });
 }
@@ -425,7 +424,7 @@ function explainPairMove(
         : restored.length > 0
           ? ` It also puts ${list(restored)} back.`
           : "";
-    const vars = { move, remaining: remaining(n - k), lift };
+    const vars = { move, lift };
     if (cornerMoved && edgeMoved) {
       return explain(`${st}.join.both`, { ...vars, cpos: posName(after, pc), epos: posName(after, pe), near });
     }
@@ -474,12 +473,12 @@ function explainPairMove(
     const pos = posName(after, pc);
     return displaced.length > 0
       ? explain(`${st}.insert.carry-lift`, { move, pos, ...keptVars(displaced) })
-      : explain(`${st}.insert.carry`, { move, pos, slot, remaining: remaining(n - k) });
+      : explain(`${st}.insert.carry`, { move, pos });
   }
   // The pair stays put: did the move turn its (empty) slot?
   const slotPos = applyMoves(solvedCube(), [move]).cp.indexOf(pc.piece);
   if (slotPos !== pc.piece) {
-    return explain(`${st}.insert.open`, { move, slot, pos: CORNER_POS[slotPos], remaining: remaining(n - k) });
+    return explain(`${st}.insert.open`, { move, slot, pos: CORNER_POS[slotPos] });
   }
   // A middle-slice turn ahead of a wide turn (which also turns the middle slice).
   const wide = rest.find((m) => m[0] === "r");
