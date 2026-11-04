@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { applyMoves, solvedState } from "@/lib/cube/model";
 import { parseAlgorithm, type Move } from "@/lib/cube/notation";
 import { lseBadEdges } from "@/lib/solver/lse";
+import type { CmllMethod } from "@/lib/solver/cmll";
 import { solveRoux } from "@/lib/solver/roux";
 import { DEMO_HELD_SCRAMBLE } from "./demoLesson";
 import { EXPLANATIONS, explain, explainRouxSolution, isFallback, moveHow, type ExplanationKey } from "./explanations";
@@ -27,9 +28,9 @@ function scrambles(count: number, length = 25): string[] {
 }
 
 /** Every move of a scramble's solve with its step, stage and explanation. */
-function explained(scramble: string) {
+function explained(scramble: string, corners: CmllMethod = "full") {
   const start = applyMoves(solvedState(), scramble);
-  const solution = solveRoux(start);
+  const solution = solveRoux(start, { corners });
   const explanations = explainRouxSolution(start, solution);
   let i = 0;
   let state = start;
@@ -57,9 +58,11 @@ describe("explanation dictionary", () => {
   it("gives every move of 240 random solves its own entry (never a fallback), at most 240 characters for a phone screen", () => {
     const used = new Map<ExplanationKey, number>();
     let moves = 0;
-    for (const scramble of scrambles(240)) {
+    // Each scramble with full CMLL and with the beginner's two corner algorithms.
+    for (const [i, scramble] of scrambles(240).entries()) {
+      const corners: CmllMethod = i % 2 === 0 ? "full" : "beginner";
       const start = applyMoves(solvedState(), scramble);
-      const solution = solveRoux(start);
+      const solution = solveRoux(start, { corners });
       const explanations = explainRouxSolution(start, solution);
       expect(explanations, scramble).toHaveLength(solution.moves.length);
       // Entries are keyed by stage first ("fb.join.final").
@@ -102,6 +105,8 @@ describe("explanation dictionary", () => {
       "cmll.alg.breaks",
       "cmll.alg.restores",
       "cmll.alg.end",
+      "cmll.orient.start",
+      "cmll.orient.end",
       "lse.eo.flip",
       "lse.eo.slice",
       "lse.eo.final",
@@ -213,6 +218,20 @@ describe("explanation dictionary", () => {
     expect(texts("M' U M U2 M' U M")[1]).toBe(
       "U': with the middle slice a quarter turn off, a quarter turn of the top flips all four top edges between good and bad (2 bad edges before, 4 now).",
     );
+    // Beginner corners: the set's algorithm orients, then an O algorithm swaps.
+    const sune3 = explained("R U2 R' U2 R' F R F'", "beginner");
+    const orient = sune3.filter((m) => m.step.id === "cmll-orient");
+    expect(orient[0].text).toBe(
+      "R (right side up) starts the Sune algorithm, R U R' U R U2 R'. Learn it as one sequence: it turns all four top corners white side up.",
+    );
+    expect(orient.at(-1)?.text).toBe(
+      "R' finishes the Sune algorithm: both blocks are back and all four top corners show white on top. Next, one more algorithm swaps them into place.",
+    );
+    expect(sune3.find((m) => m.step.id === "cmll")?.step.name).toBe("Swap the corners: O Adjacent (Jb perm)");
+    expect(explained("U' F R' F' R U R U' R'", "beginner").filter((m) => m.step.id === "cmll-orient").at(-1)?.text).toBe(
+      "F' finishes the T algorithm: both blocks are back and all four top corners show white on top. They are already in their places, just turned: the top layer gets lined up while solving the edges.",
+    );
+
     // The last four edges: a fixed algorithm, pointed out like CMLL's.
     expect(keys("M2 U2 M2 U2")).toEqual(["lse.ep.alg-start", "lse.ep.alg-middle", "lse.ep.alg-middle", "lse.ep.alg-end"]);
     expect(texts("M' U2 M U2")).toEqual([

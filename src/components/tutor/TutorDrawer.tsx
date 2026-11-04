@@ -13,7 +13,9 @@
 import { useEffect, useRef } from "react";
 import { Drawer } from "@base-ui/react/drawer";
 import { useCubeStore } from "@/lib/cube/CubeStoreProvider";
+import type { CmllMethod } from "@/lib/tutor/corners";
 import { ROUX_STAGES, stageById, type Lesson, type RouxStageId } from "@/lib/tutor/lesson";
+import { StageInfo } from "./StageInfo";
 
 // Shared by the drawer and the empty outline the server renders in its place.
 const SHEET_CLASS =
@@ -24,10 +26,15 @@ export function TutorDrawer({
   lesson,
   expanded = false,
   onExpandedChange,
+  onCornersChange,
+  switchingCorners = false,
 }: {
   lesson: Lesson;
   expanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
+  /** Re-solve with the other way of doing the corners, from the move the user is on. */
+  onCornersChange?: (corners: CmllMethod, stepIndex: number) => void;
+  switchingCorners?: boolean;
 }) {
   const stepIndex = useCubeStore((s) => s.stepIndex);
   const next = useCubeStore((s) => s.next);
@@ -85,13 +92,29 @@ export function TutorDrawer({
           >
             <StageIndicator current={step?.stage ?? null} />
 
-            <div className="flex items-baseline justify-between gap-2">
-              <Drawer.Title id="tutor-stage" className="text-base font-semibold">
-                {stage ? stage.name : "Solved"}
-              </Drawer.Title>
-              <div className="flex items-center gap-1">
-                <p aria-live="polite" className="text-sm text-zinc-600 tabular-nums dark:text-zinc-400">
-                  {finished ? `All ${total} moves played` : `Move ${stepIndex + 1} of ${total}`}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-1">
+                <Drawer.Title id="tutor-stage" className="truncate text-base font-semibold">
+                  {stage ? stage.name : "Solved"}
+                </Drawer.Title>
+                <StageInfo
+                  current={step?.stage ?? null}
+                  corners={lesson.corners}
+                  onCornersChange={onCornersChange && ((c) => onCornersChange(c, stepIndex))}
+                  switching={switchingCorners}
+                />
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <p aria-live="polite" className="text-sm whitespace-nowrap text-zinc-600 tabular-nums dark:text-zinc-400">
+                  {finished ? (
+                    `All ${total} moves played`
+                  ) : (
+                    <>
+                      {/* Just "27 of 47" on the narrowest phones, so the row fits on one line. */}
+                      <span className="max-[359px]:sr-only">{`Move ${stepIndex + 1} of ${total}`}</span>
+                      <span aria-hidden="true" className="hidden max-[359px]:inline">{`${stepIndex + 1} of ${total}`}</span>
+                    </>
+                  )}
                 </p>
                 {onExpandedChange && (
                   <button

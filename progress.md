@@ -3,12 +3,13 @@
 ## Current State
 
 **Last Updated:** 2026-11-04
-**Active Feature:** feat-018 step list in the drawer (owner request). Every feature in `feature_list.json` is done
+**Active Feature:** feat-019 stage info bubble + beginner corners (owner request). Every feature in `feature_list.json` is done
 
 ## Status
 
 ### What's Done
 
+- [x] 2026-11-04 feat-019 (owner: explain the stages in an info bubble; beginner corners seem easier): info button next to the stage name opens "The Roux method" with a tab per stage. Corners default to beginner two-look CMLL (7 orienting + 2 swap algorithms, ~9 more moves per solve than one-look); the CMLL tab switches to full CMLL (cookie `roux-corners`, Server Action `setCornersMethod`). The switch keeps the user's move inside the blocks. ./init.sh passed, 354/354. Risk: a reload within 15 s of switching jumps to the carried move again (harmless); not tried with a real signed-in session
 - [x] 2026-11-04 feat-018 step list in drawer (owner idea: show the step's moves, then its goal, then every move with its explanation in a list; Next scrolls to the current move). `TutorDrawer` now has fixed move chips, then a scrolling step name + goal + "What each move does" list; the "About this step" toggle and the big single-move display are gone (the current row is highlighted instead). At 40% the list only fits about one explanation, so (owner's pick) a chevron button expands the sheet to 70% and shrinks the cube view to 30%. ./init.sh passed, 348/348. Risk: collapsed on a 320x568 phone the list is ~36px tall; expand to read
 - [x] 2026-11-04 feat-018 follow-up (owner): dropped the "N more turns to ..." / "One more rotation ..." sentences from move explanations (`explanations.ts`); with the goal shown above the list they were noise. ./init.sh passed, 348/348
 - [x] 2026-11-04 feat-018 follow-up (owner): the last-four-edges step is now pointed out as an algorithm like CMLL (goal names the sequence, moves read "starts / move k of n / finishes the 3-cycle algorithm") when it has 3+ moves. Edge orientation and UL/UR stay explained move by move: the solver uses many different sequences per case there, so there is no single algorithm to name. ./init.sh passed, 349/349

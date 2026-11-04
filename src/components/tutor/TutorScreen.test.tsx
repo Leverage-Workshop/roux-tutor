@@ -5,7 +5,14 @@ import { demoLesson } from "@/lib/tutor/demoLesson";
 import { createLesson, type Lesson } from "@/lib/tutor/lesson";
 import { TutorScreen } from "./TutorScreen";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+const { router, setCornersMethod } = vi.hoisted(() => ({
+  router: { refresh: () => {}, replace: (href: string) => void href },
+  setCornersMethod: { calls: [] as string[] },
+}));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
+vi.mock("@/app/tutor/actions", () => ({
+  setCornersMethod: async (method: string) => void setCornersMethod.calls.push(method),
+}));
 
 // jsdom has no WebGL, so the cube view shows the flat net (CubeView's fallback),
 // which these tests read stickers from. Stubbing getContext skips jsdom's
@@ -228,5 +235,38 @@ describe("TutorScreen", () => {
     expect(screen.getByText("Blocks: white side down")).toBeDefined();
     ui.back();
     expect(screen.getByText("Hold the cube: Red in front, white on the bottom.")).toBeDefined();
+  });
+
+  it("explains each Roux stage in an info bubble, opened on the current stage", () => {
+    const ui = setup(demoLesson());
+    act(() => fireEvent.click(screen.getByRole("button", { name: "About the Roux stages" })));
+    const bubble = screen.getByRole("dialog", { name: "The Roux method" });
+    const tabs = within(bubble).getAllByRole("tab");
+    expect(tabs.map((t) => t.textContent)).toEqual(["FB (current)", "SB", "CMLL", "LSE"]);
+    expect(tabs[0].getAttribute("aria-selected")).toBe("true");
+    expect(within(bubble).getByText(/Build a 1×2×3 block on the left/)).toBeDefined();
+    act(() => fireEvent.click(tabs[3]));
+    expect(within(bubble).getByText(/Solve the middle slice:/)).toBeDefined();
+    act(() => fireEvent.click(tabs[2]));
+    const choice = within(bubble).getByRole("radiogroup", { name: "How this tutor solves the corners" });
+    expect(within(choice).getByRole("radio", { name: /Beginner: two algorithms/ }).getAttribute("aria-checked")).toBe("true");
+    expect(ui.stages()).toEqual(["FB (current)", "SB", "CMLL", "LSE"]);
+  });
+
+  it("switches the corners to full CMLL: saves the choice, reloads the solve, keeps the place in the blocks", async () => {
+    const replace = vi.spyOn(router, "replace");
+    setCornersMethod.calls = [];
+    const lesson = demoLesson();
+    const ui = setup(lesson);
+    for (let i = 0; i < 5; i++) ui.next();
+    act(() => fireEvent.click(screen.getByRole("button", { name: "About the Roux stages" })));
+    act(() => fireEvent.click(screen.getByRole("tab", { name: "CMLL" })));
+    await act(async () => fireEvent.click(screen.getByRole("radio", { name: /Full CMLL: one algorithm/ })));
+    expect(setCornersMethod.calls).toEqual(["full"]);
+    expect(replace).toHaveBeenCalledWith("/tutor");
+    // The re-solved lesson opens at the same move (still in the blocks).
+    cleanup();
+    render(<TutorScreen key="full" lesson={{ ...lesson, corners: "full" }} />);
+    expect(screen.getByText(`Move 6 of ${lesson.steps.length}`)).toBeDefined();
   });
 });

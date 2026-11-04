@@ -110,6 +110,9 @@ export const EXPLANATIONS = {
     "{move} ({how}): move {k} of {n} of the {case} algorithm. It takes part of the {block} apart for now; the algorithm puts it back.",
   "cmll.alg.restores": "{move} ({how}): move {k} of {n} of the {case} algorithm. It puts the {block} back together.",
   "cmll.alg.end": "{move} finishes the {case} algorithm: both blocks are back and the four top corners are solved{auf}.",
+  "cmll.orient.start":
+    "{move} ({how}) starts the {case} algorithm, {alg}. Learn it as one sequence: it turns all four top corners white side up.",
+  "cmll.orient.end": "{move} finishes the {case} algorithm: both blocks are back and all four top corners show white on top.{next}",
   "cmll.post-auf": "{move} turns the top layer so each corner sits above its matching colors on the blocks. The corners are done.",
   "cmll.skip-auf": "{move} lines the top corners up with the blocks. They were already solved, just turned: a CMLL skip!",
 
@@ -515,12 +518,28 @@ function explainCmll(
   nextStep: string | undefined,
 ): MoveExplanation {
   const { step, move, before, after, k, n } = c;
+  if (step.id === "cmll-orient-pre-auf" && step.case) {
+    return explain("cmll.pre-auf", { move, set: CMLL_SETS[step.case.set].label });
+  }
   if (step.id === "cmll-pre-auf" && cmllCase) return explain("cmll.pre-auf", { move, set: CMLL_SETS[cmllCase.set].label });
   if (step.id === "cmll-post-auf") return explain(cmllCase ? "cmll.post-auf" : "cmll.skip-auf", { move });
   const cc = step.case;
   if (!cc) throw new Error(`CMLL step ${step.id} has no case`);
-  const vars = { move, how: moveHow(move), case: cmllCaseLabel(cc), k, n };
-  if (k === 1) return explain("cmll.alg.start", { ...vars, alg: cc.alg });
+  const orient = step.id === "cmll-orient";
+  // The beginner's orienting algorithm is named after its set ("the T algorithm").
+  const vars = { move, how: moveHow(move), case: orient ? CMLL_SETS[cc.set].label : cmllCaseLabel(cc), k, n };
+  if (k === 1) return explain(orient ? "cmll.orient.start" : "cmll.alg.start", { ...vars, alg: cc.alg });
+  if (k === n && orient) {
+    const next =
+      nextStep === "cmll-pre-auf" || nextStep === "cmll"
+        ? " Next, one more algorithm swaps them into place."
+        : nextStep === "cmll-post-auf"
+          ? " They are already in their places: the next move lines them up."
+          : isCornersSolved(after)
+            ? " They are already in their places: the corners are done."
+            : " They are already in their places, just turned: the top layer gets lined up while solving the edges.";
+    return explain("cmll.orient.end", { ...vars, next });
+  }
   if (k === n) {
     const auf = isCornersSolved(after)
       ? ""
@@ -753,7 +772,8 @@ export function explainRouxSolution(start: CubeState, solution: RouxSolution): M
       return explainPairMove(block, pair, m[2] as "free" | "join" | "insert", kept, c);
     });
   }
-  const cmllCase = cmll.steps.find((s) => s.id === "cmll")?.case;
+  // The case behind the top-layer turns: the one-look case, else the beginner's orienting algorithm.
+  const cmllCase = (cmll.steps.find((s) => s.id === "cmll") ?? cmll.steps.find((s) => s.id === "cmll-orient"))?.case;
   walk(cmll.steps, (c, si) => explainCmll(c, cmllCase, cmll.steps[si + 1]?.id));
   walk(lse.steps, (c) =>
     c.step.id === "lse-eo"

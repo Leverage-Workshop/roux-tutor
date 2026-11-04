@@ -6,6 +6,8 @@
 //
 // Only server code imports this (the /tutor page builds the lesson while it
 // is prerendered), so the solver stays out of the browser bundle.
+import type { CmllMethod } from "@/lib/solver/cmll";
+import { DEFAULT_CORNERS } from "./corners";
 import type { Lesson } from "./lesson";
 import { rouxLesson } from "./rouxLesson";
 
@@ -19,8 +21,10 @@ export const DEMO_HELD_SCRAMBLE = "F U R' D R' L' D' R' U F D' U F D L' B D2 U D
 /** The same scramble from a solved cube with white on top and green in front (the lesson's `scramble`). */
 export const DEMO_SCRAMBLE = "R D F' U F' B' U' F' D R U' D R U B' L U2 D U' R B D2 B' U F2";
 
-let demo: Lesson | undefined;
+const demos = new Map<CmllMethod, Lesson>();
 /** The demo lesson, solved on first use (~300ms the first time, while the solver builds its tables). */
-export function demoLesson(): Lesson {
-  return (demo ??= rouxLesson(DEMO_SCRAMBLE));
+export function demoLesson(corners: CmllMethod = DEFAULT_CORNERS): Lesson {
+  let demo = demos.get(corners);
+  if (!demo) demos.set(corners, (demo = rouxLesson(DEMO_SCRAMBLE, corners)));
+  return demo;
 }

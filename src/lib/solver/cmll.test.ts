@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { applyMoves, solvedState, type CubeState } from "@/lib/cube/model";
 import { invertAlgorithm, parseAlgorithm, type Move } from "@/lib/cube/notation";
-import { cmllStateCount, isCmllSolved, solveCmll, solveThroughCmll } from "./cmll";
+import { beginnerCmllCases, cmllStateCount, isCmllSolved, solveCmll, solveThroughCmll } from "./cmll";
 import { cmllCases } from "./cmllCases";
 import { isFirstBlockSolved } from "./firstBlock";
 import { isSecondBlockSolved } from "./secondBlock";
@@ -149,6 +149,67 @@ describe("solveCmll", () => {
       if (solution.case) usedCases.add(solution.case.id);
     });
     expect(usedCases.size).toBe(42);
+  });
+
+  it("beginner method: solves all 648 top-corner states with 9 algorithms, orienting first, keeping both blocks", () => {
+    const nine = beginnerCmllCases();
+    expect(nine.map((c) => c.id).sort()).toEqual(["as-1", "h-1", "l-2", "o-adjacent", "o-diagonal", "pi-1", "s-1", "t-1", "u-6"]);
+    const used = new Set<string>();
+    let total = 0;
+    allTopCornerStates().forEach((corners, i) => {
+      const state = applyMoves(corners, ["", "M", "M2", "M'"][i % 4]);
+      const where = `${state.cp.join("")}/${state.co.join("")}`;
+      const solution = solveCmll(state, "beginner");
+      const end = applyMoves(state, solution.moves);
+      expect(isCmllSolved(end), where).toBe(true);
+      expect([end.center[1], end.center[4]], where).toEqual([1, 4]);
+      expect(solution.moves).toEqual(solution.steps.flatMap((s) => s.moves));
+      const ids: string[] = solution.steps.map((s) => s.id);
+      const order = ["cmll-orient-pre-auf", "cmll-orient", "cmll-pre-auf", "cmll", "cmll-post-auf"];
+      expect(order.filter((id) => ids.includes(id)), where).toEqual(ids);
+      // Orienting is needed exactly when some top corner is twisted.
+      expect(ids.includes("cmll-orient"), where).toBe([0, 1, 2, 3].some((k) => state.co[k] !== 0));
+      let s = state;
+      for (const step of solution.steps) {
+        s = applyMoves(s, step.moves);
+        expect(step.name.length > 0 && step.goal.length > 0, where).toBe(true);
+        if (step.id === "cmll-orient" || step.id === "cmll") {
+          expect(nine).toContain(step.case);
+          expect(step.moves).toEqual(step.case?.moves);
+          expect(step.goal).toContain(step.case!.alg);
+          used.add(step.case!.id);
+        } else {
+          expect(step.moves.length === 1 && /^U[2']?$/.test(step.moves[0]), where).toBe(true);
+        }
+        if (step.id === "cmll-orient") expect([0, 1, 2, 3].every((k) => s.co[k] === 0), where).toBe(true);
+        if (step.id === "cmll") expect(step.case?.set).toBe("O");
+      }
+      // Top-layer turns never run into an algorithm on the same layer. (Two
+      // algorithms back to back may: Anti-Sune ends with R, O Adjacent starts with R.)
+      for (let k = 1; k < solution.steps.length; k++) {
+        const [prev, next] = [solution.steps[k - 1], solution.steps[k]];
+        if (prev.id === "cmll-orient" && next.id === "cmll") continue;
+        expect(next.moves[0][0], where).not.toBe(prev.moves.at(-1)![0]);
+      }
+      total += solution.moves.length;
+    });
+    expect(used.size).toBe(9);
+    // More moves than one-look CMLL, but not wildly so.
+    expect(total / 648).toBeLessThan(22);
+    console.log(`beginner CMLL average ${(total / 648).toFixed(1)} moves over 648 states`);
+  });
+
+  it("beginner method: a twisted Sune case is oriented with the Sune, then swapped", () => {
+    // Sune cases other than the one the Sune solves still orient with it.
+    const tSune = cmllCases().find((c) => c.id === "s-3")!;
+    const solution = solveCmll(scrambled(invertAlgorithm(tSune.moves)), "beginner");
+    const orient = solution.steps.find((s) => s.id === "cmll-orient")!;
+    expect(orient.case?.id).toBe("s-1");
+    expect(orient.name).toBe("Twist the corners: Sune");
+    expect(orient.goal).toMatch(/^Turn all four top corners top color \(white\) up with one algorithm: R U R' U R U2 R'\. Sune pattern:/);
+    expect(solution.steps.find((s) => s.id === "cmll")?.name).toMatch(/^Swap the corners: O (Adjacent|Diagonal)/);
+    // Full CMLL solves it with its own algorithm.
+    expect(solveCmll(scrambled(invertAlgorithm(tSune.moves))).case?.id).toBe("s-3");
   });
 
   it("uses the fewest moves possible from the table", () => {

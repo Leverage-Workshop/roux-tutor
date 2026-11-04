@@ -2,6 +2,7 @@
 // tutor screen loads `steps` into the cube store; step i of the lesson is
 // move i of the store's move list.
 import { toMoves, type Move } from "@/lib/cube/notation";
+import type { CmllMethod } from "@/lib/solver/cmll";
 
 export type RouxStageId = "fb" | "sb" | "cmll" | "lse";
 
@@ -80,6 +81,8 @@ export interface Lesson {
   steps: TutorStep[];
   /** The solve's steps; each move's `phase` points here. Absent for hand-made lessons. */
   phases?: LessonPhase[];
+  /** How the solver did the top corners (see corners.ts). Absent for hand-made lessons. */
+  corners?: CmllMethod;
 }
 
 /** Build a lesson from a scramble and one algorithm per stage, in order. */
