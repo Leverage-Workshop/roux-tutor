@@ -131,6 +131,18 @@ describe("demo lesson", () => {
     expect(full.steps.map((s) => s.move)).toEqual(DEMO_LESSON.steps.map((s) => s.move));
   });
 
+  it("names the colors of the pieces each block step moves, as they sit on the held cube", () => {
+    const phase = (id: string) => DEMO_LESSON.phases!.find((p) => p.id === id)!;
+    expect(phase("dl-edge").name).toBe("Bottom-left edge (white-blue)");
+    expect(phase("back-pair-join").name).toBe("Back pair (orange-blue): join corner and edge");
+    expect(phase("back-pair-join").goal).toMatch(/^Bring the white-orange-blue corner and the orange-blue edge together/);
+    expect(phase("front-pair-insert").goal).toMatch(/^Move the joined white-red-blue corner and red-blue edge into the front-left/);
+    expect(phase("front-right-pair-free").name).toBe("Front-right pair (red-green): free the pieces");
+    for (const p of DEMO_LESSON.phases!.filter((p) => p.stage === "fb" || p.stage === "sb")) {
+      expect(p.name, p.id).toMatch(/\((white|red|orange)-(blue|green)\)/);
+    }
+  });
+
   it("builds the second block with only R, r, U and M, and LSE with only U and M", () => {
     const bases = (stage: RouxStageId) =>
       new Set(DEMO_LESSON.steps.filter((s) => s.stage === stage).map((s) => s.move[0]));
