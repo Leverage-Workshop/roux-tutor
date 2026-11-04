@@ -110,8 +110,10 @@ describe("explanation dictionary", () => {
       "lse.ulur.spot",
       "lse.ulur.final-top",
       "lse.ep.slice",
-      "lse.ep.top",
       "lse.ep.final-slice",
+      "lse.ep.alg-start",
+      "lse.ep.alg-middle",
+      "lse.ep.alg-end",
     ] as const) {
       expect(used.get(key) ?? 0, key).toBeGreaterThan(0);
     }
@@ -211,7 +213,17 @@ describe("explanation dictionary", () => {
     expect(texts("M' U M U2 M' U M")[1]).toBe(
       "U': with the middle slice a quarter turn off, a quarter turn of the top flips all four top edges between good and bad (2 bad edges before, 4 now).",
     );
-    expect(keys("M2 U2 M2 U2")).toEqual(["lse.ep.top", "lse.ep.slice", "lse.ep.top", "lse.ep.final-slice"]);
+    // The last four edges: a fixed algorithm, pointed out like CMLL's.
+    expect(keys("M2 U2 M2 U2")).toEqual(["lse.ep.alg-start", "lse.ep.alg-middle", "lse.ep.alg-middle", "lse.ep.alg-end"]);
+    expect(texts("M' U2 M U2")).toEqual([
+      "U2 (top layer half turn) starts the 3-cycle algorithm, U2 M' U2 M. Learn it as one sequence: it cycles three edges and finishes the cube.",
+      "M' (middle slice up): move 2 of 4 of the 3-cycle algorithm.",
+      "U2 (top layer half turn): move 3 of 4 of the 3-cycle algorithm. It swaps the top front and top back edges.",
+      "M finishes the 3-cycle algorithm: the cube is solved!",
+    ]);
+    expect(texts("M U2 M2 U2 M")[0]).toBe(
+      "M (middle slice down) starts the top-bottom swap algorithm, M U2 M2 U2 M. Learn it as one sequence: it swaps two pairs of edges and finishes the cube.",
+    );
     expect(keys("U")).toEqual(["lse.ulur.final-top"]);
   });
 });

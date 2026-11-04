@@ -44,6 +44,13 @@ export interface LseStep extends SolveStep<LseStepId> {
    * bottom, 1 or 3 = a quarter turn off).
    */
   centersOff: number;
+  /**
+   * Set when the step's moves are a fixed algorithm to learn as one sequence
+   * (the last four edges, 3+ moves): its short name, e.g. "3-cycle", and the
+   * moves written out. Orienting edges and placing UL/UR are worked out
+   * case by case instead.
+   */
+  algorithm?: { name: string; alg: string };
 }
 
 export interface LseSolution {
@@ -480,6 +487,22 @@ function plan(t: Tables, start: number, prevLayer: number): Plan {
   return bestFrom(0, start, prevLayer, true);
 }
 
+/**
+ * The last four edges come down to a few cases, each solved by one short
+ * algorithm (plus centers and top-layer turns). Shorter steps (M2, M' U2) are
+ * not worth calling an algorithm.
+ */
+const EP_ALGORITHMS: Record<string, string> = {
+  "ep-swap-front-back": "front-back swap",
+  "ep-swap-top-bottom": "top-bottom swap",
+  "ep-swap-diagonal": "diagonal swap",
+};
+function epAlgorithm(c: LseCase, moves: readonly Move[]): LseStep["algorithm"] {
+  const name = c.id.startsWith("ep-3-cycle") ? "3-cycle" : EP_ALGORITHMS[c.id];
+  if (!name || moves.length < 3) return undefined;
+  return { name, alg: moves.join(" ") };
+}
+
 export interface LseOptions {
   /** The last move before LSE (e.g. CMLL's), so the first step doesn't start on that layer when avoidable. */
   previousMove?: Move;
@@ -506,7 +529,11 @@ export function solveLse(state: CubeState, options: LseOptions = {}): LseSolutio
     if (moves.length === 0) continue;
     const id = PHASES[phase];
     const c = phase === 0 ? eoCase(i) : phase === 1 ? ulurCase(t, i) : epCase(t, i);
-    steps.push({ id, ...stepText(id, c), moves: moves.map((m) => LSE_MOVES[m]), case: c, centersOff: centersOf(i) });
+    const stepMoves = moves.map((m) => LSE_MOVES[m]);
+    const text = stepText(id, c);
+    const algorithm = id === "lse-ep" ? epAlgorithm(c, stepMoves) : undefined;
+    if (algorithm) text.goal += ` The moves are one short algorithm for this case: ${algorithm.alg}. Learn it as one sequence.`;
+    steps.push({ id, ...text, moves: stepMoves, case: c, centersOff: centersOf(i), ...(algorithm && { algorithm }) });
     for (const m of moves) i = applyIndex(t, i, m);
   }
   if (i !== SOLVED_INDEX) throw new Error("LSE plan did not solve the cube");

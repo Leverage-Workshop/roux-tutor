@@ -145,6 +145,10 @@ export const EXPLANATIONS = {
   "lse.ep.top":
     "{move} swaps the top front and top back edges, setting up the next middle-slice turn (move {k} of {n} of this step).",
   "lse.ep.other": "{move} sets up the last four edges (move {k} of {n} of this step).",
+  "lse.ep.alg-start":
+    "{move} ({how}) starts the {case} algorithm, {alg}. Learn it as one sequence: it {does} and finishes the cube.",
+  "lse.ep.alg-middle": "{move} ({how}): move {k} of {n} of the {case} algorithm.{detail}",
+  "lse.ep.alg-end": "{move} finishes the {case} algorithm: the cube is solved!",
 } as const;
 
 export type ExplanationKey = keyof typeof EXPLANATIONS;
@@ -692,13 +696,23 @@ function explainUlur(c: MoveContext<LseStep>): MoveExplanation {
 const overSlice = (pos: number) => pos === EDGES.UF || pos === EDGES.UB;
 
 function explainEp(c: MoveContext<LseStep>): MoveExplanation {
-  const { move, after, k, n } = c;
+  const { step, move, after, k, n } = c;
   // The case itself (e.g. "3-cycle (yellow-blue in place)") is in the step's name.
   const vars = { move, k, n };
+  const centersBack = move[0] === "M" && after.center[0] === 0 ? " The white center is back on top." : "";
+  if (step.algorithm) {
+    const algVars = { move, how: moveHow(move), case: step.algorithm.name, k, n };
+    if (k === 1) {
+      const does = step.algorithm.name === "3-cycle" ? "cycles three edges" : "swaps two pairs of edges";
+      return explain("lse.ep.alg-start", { ...algVars, alg: step.algorithm.alg, does });
+    }
+    if (k === n) return explain("lse.ep.alg-end", algVars);
+    const detail = move === "U2" ? " It swaps the top front and top back edges." : centersBack;
+    return explain("lse.ep.alg-middle", { ...algVars, detail });
+  }
   if (k === n) return explain(move[0] === "U" ? "lse.ep.final-top" : "lse.ep.final-slice", { move });
   if (move[0] === "M") {
-    const centers = after.center[0] === 0 ? " The white center is back on top." : "";
-    return explain("lse.ep.slice", { ...vars, centers });
+    return explain("lse.ep.slice", { ...vars, centers: centersBack });
   }
   if (move === "U2") return explain("lse.ep.top", vars);
   return explain("lse.ep.other", vars);

@@ -197,6 +197,31 @@ describe("solveLse", () => {
     expect(stepSummary(solveLse(scrambled("M2")))).toEqual([["lse-ep", "M2"]]);
   });
 
+  it("marks the last four edges as an algorithm to learn when it takes 3 or more moves, and nothing else", () => {
+    const ep = solveLse(scrambled("M' U2 M U2")).steps[0];
+    expect(ep.algorithm).toEqual({ name: "3-cycle", alg: "U2 M' U2 M" });
+    expect(ep.goal).toMatch(/The moves are one short algorithm for this case: U2 M' U2 M\. Learn it as one sequence\.$/);
+    expect(solveLse(scrambled("M2 U2 M2 U2")).steps[0].algorithm?.name).toBe("front-back swap");
+    expect(solveLse(scrambled("M U2 M2 U2 M")).steps[0].algorithm?.name).toBe("top-bottom swap");
+    expect(solveLse(scrambled("M2")).steps[0].algorithm).toBeUndefined();
+
+    const names = new Set<string>();
+    for (const alg of randomLseAlgs(400)) {
+      for (const step of solveLse(scrambled(alg)).steps) {
+        const expected = step.id === "lse-ep" && step.case.id !== "ep-centers" && step.moves.length >= 3;
+        expect(step.algorithm !== undefined, `${alg.join(" ")}: ${step.id} ${step.moves.join(" ")}`).toBe(expected);
+        if (step.algorithm) {
+          expect(step.algorithm.alg).toBe(step.moves.join(" "));
+          expect(step.goal).toContain(step.algorithm.alg);
+          names.add(step.algorithm.name);
+        } else {
+          expect(step.goal).not.toMatch(/algorithm/);
+        }
+      }
+    }
+    expect([...names].sort()).toEqual(["3-cycle", "diagonal swap", "front-back swap", "top-bottom swap"]);
+  });
+
   it("lines up UL and UR with a top-layer turn", () => {
     const solution = solveLse(scrambled("U"));
     expect(stepSummary(solution)).toEqual([["lse-ulur", "U'"]]);
