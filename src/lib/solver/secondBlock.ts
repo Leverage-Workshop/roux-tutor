@@ -60,7 +60,7 @@ const CENTERS_NOTE =
 function stepText(id: SecondBlockStepId, centersOff: boolean): { name: string; goal: string } {
   if (id === "dr-edge") {
     return {
-      name: "Bottom-right edge",
+      name: "Bottom-right edge (yellow-red)",
       goal:
         "Put the yellow-red edge in the bottom-right slot, red next to the red center and yellow on the bottom like the left block. From here on only R, r, U and M are turned, so the left block stays untouched." +
         (centersOff ? CENTERS_NOTE : ""),
@@ -71,18 +71,18 @@ function stepText(id: SecondBlockStepId, centersOff: boolean): { name: string; g
   switch (phase) {
     case "free":
       return {
-        name: `${label}: free the pieces`,
+        name: `${label} (${edge}): free the pieces`,
         goal: `The ${corner} corner or the ${edge} edge is stuck in the right side. Lift it out to the top layer, where it can move freely; the bottom-right edge ends back in place.`,
       };
     case "join":
       return {
-        name: `${label}: join corner and edge`,
+        name: `${label} (${edge}): join corner and edge`,
         goal: `Bring the ${corner} corner and the ${edge} edge together in the top layer so their colors match side by side. R turns may lift the bottom-right edge for a moment; it ends back in place.`,
       };
     case "insert":
       return {
-        name: `${label}: insert the pair`,
-        goal: `Move the finished pair into the ${slot} of the block in one piece, without splitting it.`,
+        name: `${label} (${edge}): insert the pair`,
+        goal: `Move the joined ${corner} corner and ${edge} edge into the ${slot} of the block in one piece, without splitting it.`,
       };
   }
 }

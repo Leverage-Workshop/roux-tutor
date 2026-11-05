@@ -43,9 +43,9 @@ export interface FirstBlockSolution {
   steps: SolveStep<FirstBlockStepId>[];
 }
 
-const PAIR_TEXT: Record<PairId, { label: string; slot: string }> = {
-  front: { label: "Front pair", slot: "front-left" },
-  back: { label: "Back pair", slot: "back-left" },
+const PAIR_TEXT: Record<PairId, { label: string; slot: string; corner: string; edge: string }> = {
+  front: { label: "Front pair", slot: "front-left", corner: "yellow-green-orange", edge: "green-orange" },
+  back: { label: "Back pair", slot: "back-left", corner: "yellow-blue-orange", edge: "blue-orange" },
 };
 
 function stepText(id: FirstBlockStepId): { name: string; goal: string } {
@@ -57,27 +57,27 @@ function stepText(id: FirstBlockStepId): { name: string; goal: string } {
   }
   if (id === "dl-edge") {
     return {
-      name: "Bottom-left edge",
+      name: "Bottom-left edge (yellow-orange)",
       goal: "Put the yellow-orange edge in the bottom-left slot, orange next to the orange center.",
     };
   }
   const [pair, , phase] = id.split("-") as [PairId, "pair", PairPhase];
-  const { label, slot } = PAIR_TEXT[pair];
+  const { label, slot, corner, edge } = PAIR_TEXT[pair];
   switch (phase) {
     case "free":
       return {
-        name: `${label}: free the pieces`,
-        goal: `The ${slot} corner or its edge is stuck on the left side. Move it out to the top or right, where it can turn freely.`,
+        name: `${label} (${edge}): free the pieces`,
+        goal: `The ${corner} corner or the ${edge} edge is stuck on the left side. Move it out to the top or right, where it can turn freely.`,
       };
     case "join":
       return {
-        name: `${label}: join corner and edge`,
-        goal: `Bring the ${slot} corner and its edge together so their colors match side by side. Only U, R, r and M are used, so the left side stays untouched.`,
+        name: `${label} (${edge}): join corner and edge`,
+        goal: `Bring the ${corner} corner and the ${edge} edge together so their colors match side by side. Only U, R, r and M are used, so the left side stays untouched.`,
       };
     case "insert":
       return {
-        name: `${label}: insert the pair`,
-        goal: `Move the finished pair into the ${slot} of the block in one piece.`,
+        name: `${label} (${edge}): insert the pair`,
+        goal: `Move the joined ${corner} corner and ${edge} edge into the ${slot} of the block in one piece.`,
       };
   }
 }
