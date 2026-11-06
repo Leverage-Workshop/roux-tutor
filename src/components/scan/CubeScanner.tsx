@@ -40,7 +40,7 @@ export function CubeScanner() {
   const finish = useEffectEvent((all: CapturedSide[]) => {
     setDone(true);
     const { draft } = assembleCube(all.map((s) => s.lab));
-    router.push(editorHref(draft, "scan"));
+    router.push(editorHref(draft));
   });
 
   useEffect(() => {

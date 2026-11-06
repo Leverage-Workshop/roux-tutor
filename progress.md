@@ -2,13 +2,14 @@
 
 ## Current State
 
-**Last Updated:** 2026-11-04
-**Active Feature:** feat-019 stage info bubble + beginner corners (owner request). Every feature in `feature_list.json` is done
+**Last Updated:** 2026-11-06
+**Active Feature:** none. Database, sign-in and saved progress removed at the owner's request (feat-012 and feat-015 now `removed`). Every other feature in `feature_list.json` is done
 
 ## Status
 
 ### What's Done
 
+- [x] 2026-11-06 removed the database (owner request): Supabase sign-in, tutoring sessions, saved cubes, `/progress`, `/auth/*`, `src/proxy.ts`, `src/lib/supabase/`, `src/types/database.ts`, `supabase/migrations/`, `docs/AUTH.md`, `.env.example` and both `@supabase/*` packages are gone. `/tutor` no longer takes `?session=`; links no longer carry `&from=scan` (only used to label saved solves; old links still work, the parameter is ignored). Dropped the now-unused `stageEnds`/`stageInProgress` (lesson.ts) and `CubeStoreProvider`'s `step` prop. The app needs no env vars. ./init.sh passed (typecheck, lint, 302/302 tests, build; routes `/`, `/enter`, `/scan`, `/tutor`). Playwright at 390x844: home and tutor headers fine. Infra: the Vercel env vars `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and the Supabase project `roux-tutor` (ref `uhswyjnzypxpdomhlxdy`) are for the owner to delete in the dashboards (no delete tool in this session's connectors); see Blockers
 - [x] 2026-11-04 feat-018 follow-up (owner: the step summary gives locations, not colors): block step names now carry the pair's colors ("Back pair (orange-blue): join corner and edge", "Bottom-left edge (white-blue)") and first-block and insert goals name the corner and edge colors like the second block's already did (`firstBlock.ts`, `secondBlock.ts`). ./init.sh passed, 355/355
 - [x] 2026-11-04 feat-019 (owner: explain the stages in an info bubble; beginner corners seem easier): info button next to the stage name opens "The Roux method" with a tab per stage. Corners default to beginner two-look CMLL (7 orienting + 2 swap algorithms, ~9 more moves per solve than one-look); the CMLL tab switches to full CMLL (cookie `roux-corners`, Server Action `setCornersMethod`). The switch keeps the user's move inside the blocks. ./init.sh passed, 354/354. Risk: a reload within 15 s of switching jumps to the carried move again (harmless); not tried with a real signed-in session
 - [x] 2026-11-04 feat-018 step list in drawer (owner idea: show the step's moves, then its goal, then every move with its explanation in a list; Next scrolls to the current move). `TutorDrawer` now has fixed move chips, then a scrolling step name + goal + "What each move does" list; the "About this step" toggle and the big single-move display are gone (the current row is highlighted instead). At 40% the list only fits about one explanation, so (owner's pick) a chevron button expands the sheet to 70% and shrinks the cube view to 30%. ./init.sh passed, 348/348. Risk: collapsed on a 320x568 phone the list is ~36px tall; expand to read
@@ -127,20 +128,16 @@
 
 ### What's Next
 
-1. Owner: sign in, step through part of a solve, bookmark a cube, open `/progress` (initial at the top right) and tap Continue. Only checked with a faked session so far
-2. Try the scanner on a real phone with a real cube (only synthetic images and a fake camera video were tested); tune `grid.ts` thresholds if needed
-3. Optional: "New scramble" on `/tutor` (random cube to set up by hand): cheap, since `/tutor?cube=` solves any cube on the server; needs a way to show the scramble moves
-4. Optional for the 3D view: a "reset view" button after orbiting, and swiping on the cube to turn layers (the PRD's "interactions on the cube trigger visual layer rotations"; not part of feat-004)
+1. Try the scanner on a real phone with a real cube (only synthetic images and a fake camera video were tested); tune `grid.ts` thresholds if needed
+2. Optional: "New scramble" on `/tutor` (random cube to set up by hand): cheap, since `/tutor?cube=` solves any cube on the server; needs a way to show the scramble moves
+3. Optional for the 3D view: a "reset view" button after orbiting, and swiping on the cube to turn layers (the PRD's "interactions on the cube trigger visual layer rotations"; not part of feat-004)
 
 ## Blockers / Risks
 
 - [x] OpenCV.js bundle is ~10MB: not used (feat-011 scans in plain TypeScript). `@techstark/opencv-js` is still in `package.json`, unused; remove it if no later feature needs it
 - [ ] Scanner tested only on synthetic images and a generated fake-camera video (no real phone or cube in the sandbox). Real-world risks: red vs orange and white vs yellow under odd lighting (mitigated: colors learned from the scan's own centers, exactly 9 per color, and the editor marks impossible pieces), strong glare, stickerless cubes with very thin gaps (lines must stand out by 14/255 in luminance), a flat-colored thumb fully covering one sticker reads as a sticker. Non-standard color schemes (e.g. white opposite blue) can't be scanned or entered
 - [ ] Frame analysis runs on the main thread: ~28ms per frame on the dev container, so maybe 60-110ms on a mid-range phone. The loop waits for each frame, so slow phones just check fewer frames per second (capture takes a little longer). If the camera view stutters, move `findFace` to a Web Worker
-- [ ] feat-015 not yet tried with a real Google sign-in (the sandbox can't sign in); the server-side `/progress` read was only exercised signed out
-- [x] feat-015: a refresh mid-solve used to count as a second solve; fixed by Continue (the URL switches to `/tutor?session=<id>`)
-- [ ] Continue re-solves the saved cube on the server and compares moves; if the solver changes in a later deploy, old unfinished sessions start over as new ones (by design, so the saved step still means the same move)
-- [ ] Supabase free plan pauses a project after a week without activity; the Leverage Workshop org now uses both free project slots (Gekko, roux-tutor)
+- [ ] 2026-11-06 database removed from the code, but two manual steps remain for the owner: delete `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from the Vercel project `roux-tutor` (all environments), and delete the Supabase project `roux-tutor` (ref `uhswyjnzypxpdomhlxdy`; held 9 tutoring sessions, 0 saved cubes). Delete Supabase only after this change is live in production, or sign-in on the live site breaks first. The Google OAuth client in Google Cloud ("Roux Tutor") is also unused now
 - [x] Human-style Roux solver (FB/SB) is the hardest part; no off-the-shelf library does it. Both blocks done (feat-006, feat-007)
 - [x] After FB+SB the M-slice centers are usually turned (~75% of random cubes); CMLL recognizes from corners only, LSE fixes the centers (feat-009)
 - [ ] LSE phases are each optimal on their own, so a step can be long where a combined solve would be shorter (e.g. a 1-1 EO case takes 6 moves; UL/UR up to ~9). Accepted: the owner wants human-style phases. EOLR-style lookahead (choosing EO by UL/UR) is only used to break ties between equally short EO solutions

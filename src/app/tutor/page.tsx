@@ -2,14 +2,9 @@ import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
-import { AuthButton } from "@/components/AuthButton";
 import { TutorScreen } from "@/components/tutor/TutorScreen";
-import { createClient } from "@/lib/supabase/server";
-import { getTutoringSession, type SessionSource } from "@/lib/supabase/tutoringSessions";
 import { CORNERS_COOKIE, cornersFromCookie } from "@/lib/tutor/corners";
 import { lessonForCube } from "@/lib/tutor/cubeLesson";
-import { sourceFromParam } from "@/lib/tutor/links";
-import { lessonForSession } from "@/lib/tutor/sessionLesson";
 
 export const metadata: Metadata = {
   title: "Tutor · Roux Tutor",
@@ -24,21 +19,15 @@ export const viewport: Viewport = {
 // A Server Component: the solve (and its explanations) is worked out on the
 // server and only the finished lesson is sent to the browser, so the solver
 // never ships to phones. `/tutor?cube=<54 facelet letters>` solves a cube from
-// the facelet editor (`&from=scan` when it was scanned); without it the page
-// plays the demo scramble. `/tutor?session=<id>` continues one of the
-// signed-in user's saved solves (the tutor switches to this link once a solve
-// is saved, so a refresh continues it too). The `roux-corners` cookie picks
-// the beginner's or the full way to solve the top corners (see corners.ts).
+// the facelet editor; without it the page plays the demo scramble. The
+// `roux-corners` cookie picks the beginner's or the full way to solve the top
+// corners (see corners.ts).
 export default function TutorPage({ searchParams }: PageProps<"/tutor">) {
   return (
     <Suspense fallback={<SolvingScreen />}>
-      {searchParams.then(({ cube, from, session }) =>
-        typeof session === "string" ? (
-          <TutorForSession id={session} />
-        ) : (
-          <TutorForCube cube={cube} source={sourceFromParam(from)} />
-        ),
-      )}
+      {searchParams.then(({ cube }) => (
+        <TutorForCube cube={cube} />
+      ))}
     </Suspense>
   );
 }
@@ -47,37 +36,13 @@ async function cornersSetting() {
   return cornersFromCookie((await cookies()).get(CORNERS_COOKIE)?.value);
 }
 
-// Reads the session cookie, so only this branch is per-user.
-async function TutorForSession({ id }: { id: string }) {
-  const supabase = await createClient();
-  const row = supabase ? await getTutoringSession(supabase, id).catch(() => null) : null;
-  const result = row && lessonForSession(row, await cornersSetting());
-  if (!result) {
-    return (
-      <Message
-        title="Can't find this solve"
-        text="Saved solves open only for the account that made them. Sign in with that Google account (top right), or start a new solve."
-        signIn
-      />
-    );
-  }
-  return (
-    <TutorScreen
-      key={`${result.resume?.id ?? result.lesson.start}-${result.lesson.corners}`}
-      lesson={result.lesson}
-      source={result.source}
-      resume={result.resume}
-    />
-  );
-}
-
-async function TutorForCube({ cube, source }: { cube: string | string[] | undefined; source?: SessionSource }) {
+async function TutorForCube({ cube }: { cube: string | string[] | undefined }) {
   const result = lessonForCube(cube, await cornersSetting());
   if ("error" in result) {
     return <Message title="This cube can't be solved" text={result.error} editHref={result.editHref} />;
   }
   return (
-    <TutorScreen key={`${result.lesson.start ?? "demo"}-${result.lesson.corners}`} lesson={result.lesson} source={source} />
+    <TutorScreen key={`${result.lesson.start ?? "demo"}-${result.lesson.corners}`} lesson={result.lesson} />
   );
 }
 
@@ -98,22 +63,18 @@ function Message({
   title,
   text,
   editHref,
-  signIn = false,
 }: {
   title: string;
   text: string;
   /** Offer the facelet editor with this draft. */
   editHref?: string;
-  /** Show the sign-in button in the header. */
-  signIn?: boolean;
 }) {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 px-6 pt-2 pb-8">
-      <header className="flex min-h-14 items-center justify-between gap-3">
+      <header className="flex min-h-14 items-center">
         <Link href="/" className="flex min-h-11 shrink-0 items-center font-semibold">
           Roux Tutor
         </Link>
-        {signIn && <AuthButton />}
       </header>
       <h1 className="text-2xl font-bold">{title}</h1>
       <p className="text-zinc-700 dark:text-zinc-300">{text}</p>

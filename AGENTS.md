@@ -13,7 +13,7 @@ Roux Tutor: a mobile-first Next.js app that teaches the Roux method for solving 
 | 3D | `three`, `@react-three/fiber`, `@react-three/drei` | Use drei `<OrbitControls>` for touch camera |
 | Vision | Plain TypeScript (`src/lib/scan/`) | Live scan analyzes small canvas snapshots of the camera video (grid fit, Lab colors); no CV library. `@techstark/opencv-js` (~10MB WASM) is installed but unused: if ever needed, lazy-load it in the browser only, never import it at module top level of shared code |
 | Cube model | `cubejs` | Supports U R F D L B, M E S, r u f d l b, x y z. Types in `src/types/cubejs.d.ts`. Do NOT use its Kociemba `solve()` for teaching output |
-| Backend | `@supabase/supabase-js`, `@supabase/ssr` | Project `roux-tutor`; see `docs/AUTH.md`. Migrations in `supabase/migrations/`, generated types in `src/types/database.ts`; every table needs RLS |
+| Backend | None | No database or sign-in (Supabase was removed 2026-11-06). The only server work is solving cubes in Server Components |
 | Tests | `vitest`, `@testing-library/react`, jsdom | Tests live next to code as `*.test.ts(x)` |
 
 ## Startup Workflow
