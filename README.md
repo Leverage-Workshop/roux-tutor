@@ -6,7 +6,6 @@ Mobile-first web app that teaches the Roux method for solving a Rubik's Cube. Se
 
 ```bash
 nvm use                      # Node 24 (see .nvmrc)
-cp .env.example .env.local   # fill in Supabase values
 npm install
 npm run dev                  # http://localhost:3000
 ```

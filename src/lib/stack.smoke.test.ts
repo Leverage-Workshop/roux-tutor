@@ -24,17 +24,15 @@ describe("tech stack smoke test", () => {
     expect(useStep.getState().step).toBe(1);
   });
 
-  it("three, R3F, drei, Base UI drawer and supabase load", async () => {
+  it("three, R3F, drei, and Base UI drawer load", async () => {
     expect(new THREE.BoxGeometry(1, 1, 1).type).toBe("BoxGeometry");
-    const [fiber, drei, baseUi, supabase] = await Promise.all([
+    const [fiber, drei, baseUi] = await Promise.all([
       import("@react-three/fiber"),
       import("@react-three/drei"),
       import("@base-ui/react/drawer"),
-      import("@supabase/supabase-js"),
     ]);
     expect(fiber.Canvas).toBeDefined();
     expect(drei.OrbitControls).toBeDefined();
     expect(baseUi.Drawer.Popup).toBeDefined();
-    expect(typeof supabase.createClient).toBe("function");
   });
 });

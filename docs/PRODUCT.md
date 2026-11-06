@@ -10,7 +10,7 @@ The core loop allows a user to scan their physical scrambled cube with the phone
 * **Production URL:** `rouxtutor.leverageworkshop.com`
 * **Hosting Platform:** Vercel
 * **DNS Provider:** Cloudflare
-* **Database & Backend:** Supabase (Auth, User Progress tracking, Saved Scrambles)
+* **Database & Backend:** None. There is no sign-in or saved progress; Supabase was dropped (2026-11-06)
 
 ## 3. Technology Stack Architecture
 ### Frontend Core
@@ -50,4 +50,4 @@ The core loop allows a user to scan their physical scrambled cube with the phone
 
 ## 5. Security & Edge Delivery
 * Cloudflare is DNS only (no proxy): a CNAME points the production URL at Vercel, and Vercel's edge network handles caching, TLS and protection.
-* Supabase Row Level Security (RLS) policies guard historical scramble captures and learning path milestones uniquely linked to user authentication records.
+* No user data is stored: the app has no accounts or database. The only cookie remembers the corners setting.

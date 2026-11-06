@@ -11,7 +11,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { FACE_COLOR, STICKER_HEX, type Face } from "@/lib/cube/model";
 import { BLANK, EMPTY_DRAFT, checkFacelets } from "@/lib/cube/validate";
-import type { SessionSource } from "@/lib/supabase/tutoringSessions";
 import { editorHref, tutorHref } from "@/lib/tutor/links";
 
 /** The order the faces are entered in: around the sides, then top and bottom. */
@@ -49,8 +48,7 @@ function stickerName(within: number): string {
   return row === "middle" ? `middle ${col}` : col === "center" ? `${row} middle` : `${row} ${col}`;
 }
 
-/** `source` is "scan" when the draft came from the scanner; links keep it. */
-export function FaceletEditor({ initial, source }: { initial: string; source?: SessionSource }) {
+export function FaceletEditor({ initial }: { initial: string }) {
   const [draft, setDraft] = useState(initial);
   const [face, setFace] = useState<Face>("F");
   const [color, setColor] = useState<Face>("F");
@@ -64,8 +62,8 @@ export function FaceletEditor({ initial, source }: { initial: string; source?: S
   useEffect(() => {
     if (draft === synced.current) return;
     synced.current = draft;
-    window.history.replaceState(null, "", draft === EMPTY_DRAFT ? "/enter" : editorHref(draft, source));
-  }, [draft, source]);
+    window.history.replaceState(null, "", draft === EMPTY_DRAFT ? "/enter" : editorHref(draft));
+  }, [draft]);
 
   const paint = (index: number) =>
     setDraft((d) => (d[index] === color ? d : d.slice(0, index) + color + d.slice(index + 1)));
@@ -220,7 +218,7 @@ export function FaceletEditor({ initial, source }: { initial: string; source?: S
           </button>
           {check.state ? (
             <Link
-              href={tutorHref(draft, source)}
+              href={tutorHref(draft)}
               className="flex h-14 items-center justify-center rounded-2xl bg-foreground text-lg font-semibold text-background active:opacity-80"
             >
               Solve this cube

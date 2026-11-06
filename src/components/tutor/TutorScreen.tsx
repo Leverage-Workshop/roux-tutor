@@ -1,9 +1,7 @@
 "use client";
 // Tutor viewport: cube view in the top 60% of the screen, persistent drawer in
-// the bottom 40% (30% / 70% while the drawer is expanded). Both read the same cube store. For signed-in users the solve
-// is saved as a tutoring session as they step through it, and the header's
-// bookmark saves the cube. A continued solve (`resume`) opens at its saved
-// move and keeps writing to the same session.
+// the bottom 40% (30% / 70% while the drawer is expanded). Both read the same
+// cube store.
 //
 // The cube starts held the way the solve holds it (red in front, white on the
 // bottom, see hold.ts), and a hint under the cube view says how to hold it,
@@ -12,43 +10,20 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { setCornersMethod } from "@/app/tutor/actions";
-import { AuthButton } from "@/components/AuthButton";
 import { CubeStoreProvider, useCubeStore, useCubeStoreApi } from "@/lib/cube/CubeStoreProvider";
-import { STICKER_HEX, applyMoves, fromFacelets, solvedState, toFacelets, type StickerColor } from "@/lib/cube/model";
-import type { NewTutoringSession, SessionSource } from "@/lib/supabase/tutoringSessions";
+import { STICKER_HEX, applyMoves, fromFacelets, solvedState, type StickerColor } from "@/lib/cube/model";
 import { HOLD, HOLD_TEXT, HOLD_TURNED_TEXT, holdCentersStraight } from "@/lib/tutor/hold";
-import { stageEnds, type Lesson } from "@/lib/tutor/lesson";
+import type { Lesson } from "@/lib/tutor/lesson";
 import type { CmllMethod } from "@/lib/tutor/corners";
 import { editorHref, tutorHref } from "@/lib/tutor/links";
 import { CubeView } from "./CubeView";
-import { SaveCubeButton } from "./SaveCubeButton";
 import { TutorDrawer } from "./TutorDrawer";
-import { useTutoringRecorder, type TutoringResume } from "./useTutoringRecorder";
 
-/**
- * `source` says where an entered cube came from (a scan); it defaults to
- * `manual` for entered cubes and `scramble` for the demo.
- */
-export function TutorScreen({
-  lesson,
-  source,
-  resume,
-}: {
-  lesson: Lesson;
-  source?: SessionSource;
-  resume?: TutoringResume;
-}) {
+export function TutorScreen({ lesson }: { lesson: Lesson }) {
   const [start] = useState(() =>
     lesson.start ? fromFacelets(lesson.start) : applyMoves(solvedState(), lesson.scramble),
   );
-  const [session] = useState<NewTutoringSession>(() => ({
-    startFacelets: lesson.start ?? toFacelets(start),
-    source: source ?? (lesson.start ? "manual" : "scramble"),
-    moves: lesson.steps.map((s) => s.move),
-    stageEnds: stageEnds(lesson.steps),
-  }));
-  // Fixed on first render, like `session` (the recorder must not restart).
-  const [resumeAt] = useState(resume);
+  const [moves] = useState(() => lesson.steps.map((s) => s.move));
   // The cube store starts with the cube held the way the solve holds it.
   const [held] = useState(() => applyMoves(start, lesson.hold ?? []));
   // The drawer's expand button trades cube room for text: 30/70 instead of 60/40.
@@ -64,36 +39,31 @@ export function TutorScreen({
     const blocksEnd = lesson.steps.findIndex((s) => s.stage === "cmll" || s.stage === "lse");
     carryStep(lessonKey(lesson, corners), Math.min(stepIndex, blocksEnd === -1 ? lesson.steps.length : blocksEnd));
     startSwitch(async () => {
-      // The action re-renders this page with the new solve; a saved-session
-      // link (/tutor?session=) would keep the old one, so leave it for the cube's link.
+      // The action re-renders this page with the new solve; make sure the
+      // address bar shows the cube's link.
       await setCornersMethod(corners);
-      const href = lesson.start ? tutorHref(lesson.start, session.source) : "/tutor";
+      const href = lesson.start ? tutorHref(lesson.start) : "/tutor";
       if (window.location.pathname + window.location.search !== href) router.replace(href);
     });
   };
 
   return (
-    <CubeStoreProvider initial={held} moves={session.moves} step={resumeAt?.stepsCompleted}>
-      {!resumeAt && <ApplyCarriedStep lessonKey={lessonKey(lesson, lesson.corners)} />}
-      <RecordSession session={session} resume={resumeAt} />
+    <CubeStoreProvider initial={held} moves={moves}>
+      <ApplyCarriedStep lessonKey={lessonKey(lesson, lesson.corners)} />
       <main className="relative h-dvh overflow-hidden">
         <section aria-label="Cube" className={`flex flex-col ${expanded ? "h-[30dvh]" : "h-[60dvh]"}`}>
           <header className="flex min-h-14 items-center justify-between gap-2 px-4 pt-2">
             <Link href="/" className="flex min-h-11 shrink-0 items-center font-semibold">
               Roux Tutor
             </Link>
-            <div className="flex items-center gap-2">
-              {lesson.start && (
-                <Link
-                  href={editorHref(lesson.start, session.source)}
-                  className="flex min-h-11 items-center px-1 text-sm font-medium text-zinc-600 underline underline-offset-2 dark:text-zinc-400"
-                >
-                  Edit cube
-                </Link>
-              )}
-              <SaveCubeButton facelets={session.startFacelets} source={session.source} />
-              <AuthButton compact />
-            </div>
+            {lesson.start && (
+              <Link
+                href={editorHref(lesson.start)}
+                className="flex min-h-11 items-center px-1 text-sm font-medium text-zinc-600 underline underline-offset-2 dark:text-zinc-400"
+              >
+                Edit cube
+              </Link>
+            )}
           </header>
           <div className="min-h-0 flex-1">
             <CubeView caption={lesson.hold && <HoldHint />} />
@@ -178,10 +148,5 @@ function ApplyCarriedStep({ lessonKey }: { lessonKey: string }) {
     const step = takeCarriedStep(lessonKey);
     if (step) store.getState().goTo(step);
   }, [store, lessonKey]);
-  return null;
-}
-
-function RecordSession({ session, resume }: { session: NewTutoringSession; resume?: TutoringResume }) {
-  useTutoringRecorder(session, resume);
   return null;
 }
